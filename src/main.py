@@ -4,6 +4,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.db.db_session import init_db
+from src.api.v1.auth.auths import fastapi_users, auth_backend
+from src.schemas.user_schemas import UserRead, UserCreate
 
 
 @asynccontextmanager
@@ -43,6 +45,24 @@ async def root() -> dict[str, str]:
 async def healthz():
     """Health check endpoint."""
     return {"status": "ok"}
+
+
+app.include_router(
+    fastapi_users.get_auth_router(auth_backend),
+    prefix=f"/api/{VERSION}/auth/jwt", tags=["auth"]
+)
+app.include_router(
+    fastapi_users.get_register_router(UserRead, UserCreate),
+    prefix=f"/api/{VERSION}/auth", tags=["auth"]
+)
+app.include_router(
+    fastapi_users.get_reset_password_router(),
+    prefix=f"/api/{VERSION}/auth/reset-password", tags=["auth"]
+)
+app.include_router(
+    fastapi_users.get_verify_router(UserRead),
+    prefix=f"/api/{VERSION}/auth/verify", tags=["auth"]
+)
 
 
 def main():
