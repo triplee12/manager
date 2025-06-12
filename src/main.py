@@ -5,7 +5,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from src.db.db_session import init_db
 from src.api.v1.auth.auths import fastapi_users, auth_backend
-from src.schemas.user_schemas import UserRead, UserCreate
+from src.schemas.user_schemas import (
+    UserRead, UserCreate, UserUpdate
+)
+from src.api.v1.users.user_routes import user_router
 
 
 @asynccontextmanager
@@ -62,6 +65,13 @@ app.include_router(
 app.include_router(
     fastapi_users.get_verify_router(UserRead),
     prefix=f"/api/{VERSION}/auth/verify", tags=["auth"]
+)
+app.include_router(
+    fastapi_users.get_users_router(UserRead, UserUpdate),
+    prefix=f"/api/{VERSION}/users", tags=["users"]
+)
+app.include_router(
+    user_router, prefix=f"/api/{VERSION}"
 )
 
 
