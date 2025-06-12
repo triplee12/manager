@@ -24,11 +24,11 @@ class ReadProject(BaseModel):
 
     id: uuid.UUID
     title: str
-    description: Optional[str]
+    description: Optional[str] = None
     user_id: uuid.UUID
-    team_id: Optional[uuid.UUID]
-    created_at: Optional[datetime]
-    updated_at: Optional[datetime]
+    team_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
 
     model_config = ConfigDict(
         from_attributes=True,
@@ -39,9 +39,9 @@ class ReadProject(BaseModel):
 class UpdateProject(BaseModel):
     """Update Project schema for the Manager API."""
 
-    title: Optional[str]
-    description: Optional[str]
-    team_id: Optional[uuid.UUID]
+    title: Optional[str] = None
+    description: Optional[str] = None
+    team_id: Optional[uuid.UUID] = None
 
     model_config = ConfigDict(
         from_attributes=True,
