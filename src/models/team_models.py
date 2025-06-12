@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import datetime
-from sqlalchemy import ForeignKey, String, UniqueConstraint
+from sqlalchemy import ForeignKey, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import TIMESTAMP
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, relationship, mapped_column
@@ -19,7 +19,8 @@ class Team(Base):
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID_ID, primary_key=True, index=True, nullable=False
+        primary_key=True, index=True,
+        default=uuid.uuid4, server_default=text("gen_random_uuid()")
     )
     title: Mapped[str] = mapped_column(
         String(length=20), nullable=False
@@ -87,10 +88,11 @@ class TeamMember(Base):
     __tablename__ = "team_members"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID_ID, primary_key=True, index=True, nullable=False
+        primary_key=True, index=True,
+        default=uuid.uuid4, server_default=text("gen_random_uuid()")
     )
     user_id: Mapped[UUID_ID] = mapped_column(ForeignKey("user.id"), nullable=False)
-    team_id: Mapped[UUID_ID] = mapped_column(ForeignKey("team.id"), nullable=False)
+    team_id: Mapped[UUID_ID] = mapped_column(ForeignKey("teams.id"), nullable=False)
     user: Mapped[User] = relationship(back_populates="team_members")
     team: Mapped[Team] = relationship(back_populates="members")
     created_at: Mapped[datetime] = mapped_column(

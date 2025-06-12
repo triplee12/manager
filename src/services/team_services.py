@@ -250,14 +250,16 @@ class TeamMemberServices:
             return None
 
     async def get_team_members(
-        self, team_id: uuid.UUID, order: str = "asc",
-        limit: int = 10, offset: int = 0
+        self, team_id: uuid.UUID,
+        team_owner_id: Optional[uuid.UUID] = None,
+        order: str = "asc", limit: int = 10, offset: int = 0
     ):
         """
         Retrieve all members of a team from the database.
 
         Args:
         team_id (uuid.UUID): The ID of the team whose members to retrieve.
+        team_owner_id (uuid.UUID): The ID of the user who owns the team.
         order (str): Order of the members (asc or desc).
         limit (int): Maximum number of members to retrieve.
         offset (int): Number of members to skip.
@@ -266,6 +268,10 @@ class TeamMemberServices:
         List[TeamMember]: A list of team members.
         """
         statement = select(TeamMember).where(TeamMember.team_id == team_id)
+        if team_owner_id:
+            statement = select(TeamMember).where(
+                TeamMember.team_id == team_id, TeamMember.team.user_id == team_owner_id
+            )
         if order == "desc":
             statement = statement.order_by(desc(TeamMember.created_at))
         else:
@@ -275,17 +281,24 @@ class TeamMemberServices:
         members = result.scalars().all()
         return members
 
-    async def get_member_by_id(self, member_id: uuid.UUID):
+    async def get_member_by_id(
+        self, member_id: uuid.UUID, team_owner_id: Optional[uuid.UUID] = None
+    ):
         """
         Retrieve a member by its ID from the database.
 
         Args:
         member_id (uuid.UUID): The ID of the member to retrieve.
+        team_owner_id (uuid.UUID, optional): The ID of the user who owns the team.
 
         Returns:
         TeamMember: The team member with the specified ID.
         """
         statement = select(TeamMember).where(TeamMember.id == member_id)
+        if team_owner_id:
+            statement = select(TeamMember).where(
+                TeamMember.id == member_id, TeamMember.team.user_id == team_owner_id
+            )
         result = await self.session.execute(statement)
         member = result.scalars().first()
         return member
