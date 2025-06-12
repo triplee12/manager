@@ -12,7 +12,8 @@ from sqlalchemy.orm import (
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
 
 if TYPE_CHECKING:
-    from src.models.team_models import Team, TeamMember    
+    from src.models.team_models import Team, TeamMember
+    from src.models.project_models import Project
 
 
 class Base(DeclarativeBase):
@@ -54,6 +55,7 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     team_members: Mapped[list[TeamMember]] = relationship(
         back_populates="user", cascade="all, delete"
     )
+    projects: Mapped[list["Project"]] = relationship(back_populates="user", cascade="all, delete")
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False, default=datetime.now
     )

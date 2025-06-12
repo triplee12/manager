@@ -1,6 +1,7 @@
 """Team models for the Manager API."""
-
+from __future__ import annotations
 import uuid
+from typing import TYPE_CHECKING
 from datetime import datetime
 from sqlalchemy import ForeignKey, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import TIMESTAMP
@@ -8,6 +9,9 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, relationship, mapped_column
 from fastapi_users_db_sqlalchemy import UUID_ID
 from src.models.user_models import Base, User
+
+if TYPE_CHECKING:
+    from src.models.project_models import Project
 
 
 class Team(Base):
@@ -28,6 +32,7 @@ class Team(Base):
     user_id: Mapped[UUID_ID] = mapped_column(ForeignKey("user.id"), nullable=False)
     user: Mapped[User] = relationship(back_populates="teams")
     members: Mapped[list['TeamMember']] = relationship(back_populates="team", cascade="all, delete")
+    projects: Mapped[list['Project']] = relationship(back_populates="team", cascade="all, delete")
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False, default=datetime.now
     )
