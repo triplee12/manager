@@ -6,7 +6,6 @@ from typing import TYPE_CHECKING
 from datetime import datetime
 from sqlalchemy import ForeignKey, String, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import TIMESTAMP
-from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, relationship, mapped_column
 from fastapi_users_db_sqlalchemy import UUID_ID
 from src.models.user_models import Base, User
@@ -27,7 +26,7 @@ class Project(Base):
         default=uuid.uuid4, server_default=text("gen_random_uuid()")
     )
     title: Mapped[str] = mapped_column(
-        String(length=20), nullable=False
+        String(length=20), nullable=False, index=True,
     )
     description: Mapped[str] = mapped_column(
         String(length=320), nullable=True
