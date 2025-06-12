@@ -92,6 +92,19 @@ class TaskServices:
         task_priority: Optional[str],
         assignee_id: Optional[uuid.UUID], due_date: Optional[date]
     ) -> List[Task]:
+        """
+        Filter tasks based on the provided criteria.
+
+        Args:
+            project_id (uuid.UUID): The ID of the project to filter tasks by.
+            task_status (str, optional): The status of the tasks to filter by.
+            task_priority (str, optional): The priority of the tasks to filter by.
+            assignee_id (uuid.UUID, optional): The ID of the assignee to filter tasks by.
+            due_date (date, optional): The due date to filter tasks by.
+
+        Returns:
+            List[Task]: A list of tasks that match the filter criteria.
+        """
         try:
             statement = select(Task).where(Task.project_id == project_id)
             if task_status:
@@ -164,6 +177,12 @@ class TaskCommentService:
     """Task comment service."""
 
     def __init__(self, session: AsyncSession):        
+        """
+        Initialize the TaskCommentService with a database session.
+
+        Args:
+        session (AsyncSession): The database session for executing queries.
+        """
         self.session = session
 
     async def create_comment(self, data: dict) -> TaskComment | None:
@@ -182,6 +201,100 @@ class TaskCommentService:
             await self.session.commit()
             await self.session.refresh(comment)
             return comment
+        except SQLAlchemyError:
+            return None
+
+    async def get_comment_by_id(self, comment_id: uuid.UUID) -> TaskComment | None:
+        """
+        Get a comment by its ID.
+
+        Args:
+        comment_id (uuid.UUID): The ID of the comment to retrieve.
+
+        Returns:
+        Task: The comment with the specified ID.
+        """
+        try:
+            statement = select(TaskComment).where(TaskComment.id == comment_id)
+            result = await self.session.execute(statement)
+            comment = result.scalars().first()
+            return comment
+        except SQLAlchemyError:
+            return None
+
+    async def get_comments_by_task_id(self, task_id: uuid.UUID) -> List[TaskComment]:
+        """
+        Get comments for a specific task.
+
+        Args:
+        task_id (uuid.UUID): The ID of the task to retrieve comments for.
+
+        Returns:
+        List[TaskComment]: A list of comments associated with the task.
+        """
+        try:
+            statement = select(TaskComment).where(
+                TaskComment.task_id == task_id
+            ).order_by(TaskComment.created_at.desc())
+            result = await self.session.execute(statement)
+            comments = result.scalars().all()
+            return comments
+        except SQLAlchemyError:
+            return None
+
+    async def delete_comment(self, comment_id: uuid.UUID, user_id: uuid.UUID) -> bool | None:
+        """
+        Delete a comment by its ID.
+
+        Args:
+        comment_id (uuid.UUID): The ID of the comment to delete.
+        user_id (uuid.UUID): The ID of the user who created the comment.
+
+        Returns:
+        bool: True if the comment was deleted. Or None if the comment was not found.
+        """
+        try:
+            statement = select(TaskComment).where(
+                TaskComment.user_id == user_id, TaskComment.id == comment_id
+            )
+            result = await self.session.execute(statement)
+            comment = result.scalars().first()
+            if comment:
+                await self.session.delete(comment)
+                await self.session.commit()
+                return True
+            return None
+        except SQLAlchemyError:
+            return None
+
+    async def update_comment(
+        self, comment_id: uuid.UUID,
+        user_id: uuid.UUID, data: dict
+    ) -> TaskComment | None:
+        """
+        Update a comment by its ID in the database.
+
+        Args:
+        comment_id (uuid.UUID): The ID of the comment to update.
+        user_id (uuid.UUID): The ID of the user who created the comment.
+        data (dict): The data to update the comment with.
+
+        Returns:
+        Task: The updated comment. Or None if the comment was not found.
+        """
+        try:
+            statement = select(TaskComment).where(
+                TaskComment.id == comment_id, TaskComment.user_id == user_id
+            )
+            result = await self.session.execute(statement)
+            comment = result.scalars().first()
+            if comment:
+                for key, value in data.items():
+                    setattr(comment, key, value)
+                await self.session.commit()
+                await self.session.refresh(comment)
+                return comment
+            return None
         except SQLAlchemyError:
             return None
 
