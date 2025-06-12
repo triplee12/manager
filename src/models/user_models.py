@@ -6,11 +6,13 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 from sqlalchemy import String, Enum as SAEnum
 from sqlalchemy.dialects.postgresql import TIMESTAMP
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import (
+    DeclarativeBase, Mapped, mapped_column, relationship
+)
 from fastapi_users.db import SQLAlchemyBaseUserTableUUID
 
 if TYPE_CHECKING:
-    print("TYPE_CHECKING")    
+    from src.models.team_models import Team, TeamMember    
 
 
 class Base(DeclarativeBase):
@@ -47,6 +49,10 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     )
     role: Mapped[Roles] = mapped_column(
         SAEnum(Roles, name="roles"), default=Roles.MEMBER, nullable=False
+    )
+    teams: Mapped[list[Team]] = relationship(back_populates="user", cascade="all, delete")
+    team_members: Mapped[list[TeamMember]] = relationship(
+        back_populates="user", cascade="all, delete"
     )
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False, default=datetime.now
