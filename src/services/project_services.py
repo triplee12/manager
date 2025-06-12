@@ -45,9 +45,9 @@ class ProjectServices:
             await self.session.commit()
             await self.session.refresh(project)
             return project
-        except Exception as e:
+        except Exception:
             return None
-    
+
     async def get_all_projects(
         self, user_id: uuid.UUID, order: str = "asc",
         limit: int = 20, offset: int = 0
@@ -75,9 +75,9 @@ class ProjectServices:
             result = await self.session.execute(statement)
             projects = result.scalars().all()
             return projects
-        except Exception as e:
+        except Exception:
             return None
-    
+
     async def get_all_team_projects(
         self, team_id: uuid.UUID, owner_id: uuid.UUID,
         order: str = "asc", limit: int = 20, offset: int = 0
@@ -109,9 +109,9 @@ class ProjectServices:
             result = await self.session.execute(statement)
             projects = result.scalars().all()
             return projects
-        except Exception as e:
+        except Exception:
             return None
-    
+
     async def get_user_project_by_id(
         self, user_id: uuid.UUID, project_id: uuid.UUID
     ) -> Optional[Project]:
@@ -132,9 +132,9 @@ class ProjectServices:
             result = await self.session.execute(statement)
             project = result.scalars().first()
             return project
-        except Exception as e:
+        except Exception:
             return None
-    
+
     async def get_user_project_by_title(
         self, user_id: uuid.UUID, project_title: str
     ) -> Optional[Project]:
@@ -155,9 +155,9 @@ class ProjectServices:
             result = await self.session.execute(statement)
             project = result.scalars().first()
             return project
-        except Exception as e:
+        except Exception:
             return None
-    
+
     async def update_project(
         self, project_id: uuid.UUID, user_id: uuid.UUID, data: dict
     ) -> Optional[Project]:
@@ -185,9 +185,9 @@ class ProjectServices:
                 await self.session.refresh(project)
                 return project
             return None
-        except Exception as e:
+        except Exception:
             return None
-    
+
     async def delete_project(
         self, project_id: uuid.UUID, user_id: uuid.UUID
     ) -> Optional[bool]:
@@ -212,7 +212,7 @@ class ProjectServices:
                 await self.session.commit()
                 return True
             return None
-        except Exception as e:
+        except Exception:
             return None
 
 

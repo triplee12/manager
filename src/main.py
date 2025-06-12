@@ -10,6 +10,7 @@ from src.schemas.user_schemas import (
 )
 from src.api.v1.users.user_routes import user_router
 from src.api.v1.teams import team_routes, member_routes
+from src.api.v1.projects.project_routes import project_router
 
 
 @asynccontextmanager
@@ -79,6 +80,9 @@ app.include_router(
 )
 app.include_router(
     member_routes.team_member_router, prefix=f"/api/{VERSION}/members"
+)
+app.include_router(
+    project_router, prefix=f"/api/{VERSION}/projects"
 )
 
 
