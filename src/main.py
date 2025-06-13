@@ -30,6 +30,9 @@ app = FastAPI(
     title="Manager API",
     description="A scalable and modern REST API for a collaborative task management system.",
     version=VERSION,
+    swagger_ui_parameters={
+        "persistAuthorization": True,
+    },
     lifespan=life_span
 )
 

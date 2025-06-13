@@ -7,6 +7,8 @@ from sqlalchemy import select, asc, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.db.db_session import get_async_session
 from src.models.team_models import Team, TeamMember
+from src.models.activity_models import ActivityType
+from src.services.activity_services import ActivityServices
 
 
 class TeamServices:
@@ -20,6 +22,7 @@ class TeamServices:
         session (AsyncSession): The database session for executing queries.
         """
         self.session = session
+        self.activity_logs = ActivityServices(self.session)
     
     async def create_team(self, data: dict) -> Optional[Team]:
         """

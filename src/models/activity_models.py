@@ -13,7 +13,7 @@ from src.models.user_models import Base, User
 
 if TYPE_CHECKING:
     from src.models.project_models import Project
-    from src.models.task_models import Task
+    from src.models.task_models import Task, TaskComment
     from src.models.team_models import Team
 
 
@@ -43,6 +43,8 @@ class ActivityLog(Base):
     task: Mapped["Task"] = relationship(back_populates="activity_logs")
     team_id: Mapped[UUID_ID] = mapped_column(ForeignKey("teams.id"), nullable=True)
     team: Mapped["Team"] = relationship(back_populates="activity_logs")
+    comment_id: Mapped[UUID_ID] = mapped_column(ForeignKey("task_comments.id"), nullable=True)
+    task_comment: Mapped["TaskComment"] = relationship(back_populates="activity_logs")
     activity_type: Mapped[ActivityType] = mapped_column(
         Enum(ActivityType, name="logs"), nullable=False
     )
@@ -58,6 +60,6 @@ class ActivityLog(Base):
             f"ActivityLog({self.id}, {self.user_id}, {self.activity_type}, " \
             f"{self.entity}, {self.entity_id}, {self.description}, {self.created_at})"
         )
-    
+
     def __str__(self):
         return self.__repr__()

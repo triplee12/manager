@@ -12,6 +12,7 @@ from src.models.user_models import Base, User
 
 if TYPE_CHECKING:
     from src.models.project_models import Project
+    from src.models.activity_models import ActivityLog
 
 
 class Team(Base):
@@ -33,6 +34,7 @@ class Team(Base):
     user: Mapped[User] = relationship(back_populates="teams")
     members: Mapped[list['TeamMember']] = relationship(back_populates="team", cascade="all, delete")
     projects: Mapped[list['Project']] = relationship(back_populates="team", cascade="all, delete")
+    activity_logs: Mapped[list['ActivityLog']] = relationship(back_populates="team", cascade="all, delete")
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False, default=datetime.now
     )

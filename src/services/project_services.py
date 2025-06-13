@@ -11,6 +11,8 @@ from src.db.db_session import get_async_session
 from src.models.project_models import Project
 from src.models.team_models import Team, TeamMember
 from src.services.team_services import TeamServices
+from src.models.activity_models import ActivityType
+from src.services.activity_services import ActivityServices
 
 
 class ProjectServices:
@@ -25,6 +27,7 @@ class ProjectServices:
         """
         self.session = session
         self.team_services = TeamServices(session)
+        self.activity_logs = ActivityServices(self.session)
 
     async def create_project(self, data: dict) -> Optional[Project]:
         """
@@ -47,7 +50,22 @@ class ProjectServices:
             self.session.add(project)
             await self.session.commit()
             await self.session.refresh(project)
-            return project
+            data={
+                "user_id": project.user_id,
+                "team_id": project.team_id,
+                "project_id": project.id,
+                "description": f"Project {project.id} has been created.",
+                "activity_type": ActivityType.CREATE,
+                "entity": "project",
+                "entity_id": project.id
+            }
+
+            log = await self.activity_logs.create_activity(
+                activity_data=data
+            )
+            if log:
+                return project
+            # return project
         except SQLAlchemyError:
             return None
 
@@ -241,7 +259,21 @@ class ProjectServices:
                     setattr(project, key, value)
                 await self.session.commit()
                 await self.session.refresh(project)
-                return project
+                data={
+                    "user_id": project.user_id,
+                    "team_id": project.team_id,
+                    "project_id": project.id,
+                    "description": f"Project {project.id} has been created.",
+                    "activity_type": ActivityType.CREATE,
+                    "entity": "project",
+                    "entity_id": project.id
+                }
+
+                log = await self.activity_logs.create_activity(
+                    activity_data=data
+                )
+                if log:
+                    return project
             return None
         except SQLAlchemyError:
             return None
@@ -268,7 +300,21 @@ class ProjectServices:
             if project:
                 await self.session.delete(project)
                 await self.session.commit()
-                return True
+                data={
+                    "user_id": project.user_id,
+                    "team_id": project.team_id,
+                    "project_id": project.id,
+                    "description": f"Project {project.id} has been created.",
+                    "activity_type": ActivityType.CREATE,
+                    "entity": "project",
+                    "entity_id": project.id
+                }
+
+                log = await self.activity_logs.create_activity(
+                    activity_data=data
+                )
+                if log:
+                    return True
             return None
         except SQLAlchemyError:
             return None

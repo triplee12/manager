@@ -23,20 +23,20 @@ class ActivityServices:
         """
         self.session = session
     
-    async def create_activity(self, activity_data: dict):
+    async def create_activity(self, activity_data: dict) -> ActivityLog | None:
         """
         Create a new activity log entry in the database.
 
         Args:
         activity_type (ActivityType): The type of activity to create.
-        message (str): The message associated with the activity.
-        user_id (uuid.UUID): The ID of the user associated with the activity.
+        
+        Returns:
+        ActivityLog: The created activity log entry.
         """
         try:
             activity = ActivityLog(**activity_data)
             self.session.add(activity)
             await self.session.commit()
-            await self.session.refresh(activity)
             return activity
         except SQLAlchemyError:
             await self.session.rollback()

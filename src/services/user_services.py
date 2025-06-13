@@ -11,6 +11,8 @@ from src.core.configs import settings
 from src.models.user_models import User
 from src.db.db_session import get_async_session
 from src.schemas.user_schemas import UserCreate
+from src.models.activity_models import ActivityType
+from src.services.activity_services import ActivityServices
 
 SECRET = settings.OAUTH_SECRET
 
@@ -32,6 +34,46 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
 
         super().__init__(user_db)
         self.session = session
+        self.activity_logs = ActivityServices(self.session)
+
+    async def create(
+        self,
+        user_create,
+        safe: bool = False,
+        request: Optional[Request] = None,
+    ) -> User:
+        """
+        Create a new user.
+
+        Args:
+        user_create (UserCreate): The user data to be created.
+        safe (bool): Whether to create the user in a safe way.
+        request (Optional[Request]): The request that triggered the user creation.
+
+        Returns:
+        User: The created user.
+        """
+
+        user = await super().create(user_create, safe=safe, request=request)
+        await self.session.refresh(user)
+
+        user_id = user.id
+        # data={
+        #         "user_id": user_id,
+        #         "description": f"User {user_id} has registered.",
+        #         "activity_type": ActivityType.CREATE,
+        #         "entity": "user",
+        #         "entity_id": user_id,
+        #     }
+
+        # await self.activity_logs.create_activity(
+        #     activity_data=data
+        # )
+        print(
+            f"User {user_id} has registered from {request.client.host}"
+        )
+
+        return user
 
     async def get_all_users(
         self, order: str = "asc",
@@ -56,7 +98,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         result = await self.session.execute(statement)
         users = result.scalars().all()
         return users
-    
+
     async def get_all_admins(
         self, order: str = "asc",
         limit: int = 20, offset: int = 0
@@ -81,7 +123,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         result = await self.session.execute(statement)
         users = result.scalars().all()
         return users
-    
+
     async def get_all_members(
         self, order: str = "asc",
         limit: int = 20, offset: int = 0
@@ -203,6 +245,15 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         update_dict (Dict[str, Any]): A dictionary of the fields that were updated.
         request (Optional[Request]): The request that initiated the update process.
         """
+        await self.activity_logs.create_activity(
+            activity_data = {
+                "user_id": user.id,
+                "description": f"User {user.id} has been updated with {update_dict}",
+                "activity_type": ActivityType.UPDATE,
+                "entity": "user",
+                "entity_id": user.id
+            }
+        )
         print(f"User {user.id} has been updated with {update_dict}.")
 
     async def on_after_login(
@@ -239,6 +290,15 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         user (User): The user that was deleted.
         request (Optional[Request]): The request that triggered the deletion.
         """
+        await self.activity_logs.create_activity(
+            activity_data = {
+                "user_id": user.id,
+                "description": f"User {user.id} is successfully deleted",
+                "activity_type": ActivityType.DELETE,
+                "entity": "user",
+                "entity_id": user.id
+            }
+        )
         print(f"User {user.id} is successfully deleted")
 
 

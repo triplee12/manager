@@ -57,8 +57,18 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     team_members: Mapped[list[TeamMember]] = relationship(
         back_populates="user", cascade="all, delete"
     )
-    comments: Mapped[list[TaskComment]] = relationship(back_populates="user", cascade="all, delete")
-    tasks: Mapped[list[Task]] = relationship(back_populates="user", cascade="all, delete")
+    tasks: Mapped[list["Task"]] = relationship(
+        back_populates="user",
+        foreign_keys="[Task.user_id]"
+    )
+    assigned_tasks: Mapped[list["Task"]] = relationship(
+        back_populates="assigneds",
+        foreign_keys="[Task.assigned_id]"
+    )
+    task_comments: Mapped[list["TaskComment"]] = relationship(
+        back_populates="user",
+        foreign_keys="[TaskComment.user_id]"
+    )
     projects: Mapped[list["Project"]] = relationship(back_populates="user", cascade="all, delete")
     activity_logs: Mapped[list["ActivityLog"]] = relationship(back_populates="user", cascade="all, delete")
     created_at: Mapped[datetime] = mapped_column(

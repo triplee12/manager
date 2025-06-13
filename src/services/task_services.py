@@ -9,6 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 from src.db.db_session import get_async_session
 from src.models.task_models import TaskStatus, TaskPriority, Task, TaskComment
+from src.models.activity_models import ActivityType
+from src.services.activity_services import ActivityServices
 
 
 class TaskServices:
@@ -22,6 +24,7 @@ class TaskServices:
         session (AsyncSession): The database session for executing queries.
         """
         self.session = session
+        self.activity_logs = ActivityServices(self.session)
 
     async def create_task(self, data: dict) -> Task | None:
         """
