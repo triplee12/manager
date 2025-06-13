@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from src.models.team_models import Team, TeamMember
     from src.models.project_models import Project
     from src.models.task_models import Task, TaskComment
+    from src.models.activity_models import ActivityLog
 
 
 class Base(DeclarativeBase):
@@ -59,6 +60,7 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     comments: Mapped[list[TaskComment]] = relationship(back_populates="user", cascade="all, delete")
     tasks: Mapped[list[Task]] = relationship(back_populates="user", cascade="all, delete")
     projects: Mapped[list["Project"]] = relationship(back_populates="user", cascade="all, delete")
+    activity_logs: Mapped[list["ActivityLog"]] = relationship(back_populates="user", cascade="all, delete")
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False, default=datetime.now
     )
