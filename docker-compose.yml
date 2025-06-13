@@ -1,0 +1,35 @@
+services:
+  web:
+    build: .
+    container_name: managerAPI
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15
+    container_name: postgres_db
+    restart: unless-stopped
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      ENV: ${ENV}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${PASSWORD}
+      DB_URL: ${DB_URL}
+      OAUTH_SECRET: ${OAUTH_SECRET}
+      ACCESS_TOKEN_EXPIRY_WEEKS: ${ACCESS_TOKEN_EXPIRY_WEEKS}
+      ALGORITHM: ${ALGORITHM}
+
+volumes:
+  postgres_data:
