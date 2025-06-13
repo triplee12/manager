@@ -1,8 +1,10 @@
 """Database connection module."""
 
+import asyncio
 import urllib.parse
 from collections.abc import AsyncGenerator
 from sqlmodel import text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from src.core.configs import settings
 from src.models.user_models import Base
@@ -10,19 +12,17 @@ from src.models.user_models import Base
 PASSWORD = urllib.parse.quote(settings.PASSWORD, safe="")
 DB_NAME = settings.DB_NAME
 DB_USER = settings.DB_USER
-SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{PASSWORD}@localhost:5432/{DB_NAME}"
-DB_URL = settings.DB_URL
 
-if settings.ENV == "dev":
-    engine = create_async_engine(
-        SQLALCHEMY_DATABASE_URL,
-        echo=True
-    )
+if settings.ENV == "env":
+    DB_URL = f"postgresql+asyncpg://{DB_USER}:{PASSWORD}@localhost:5432/{DB_NAME}"
 else:
-    engine = create_async_engine(
-        DB_URL,
-        echo=True
-    )
+    DB_URL = settings.DB_URL
+
+engine = create_async_engine(
+    DB_URL,
+    echo=True,
+    pool_pre_ping=True
+)
 
 async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
 
@@ -40,10 +40,19 @@ async def init_db():
     operations complete successfully before proceeding.
     """
 
-    async with engine.begin() as conn:
-        extension = text("CREATE EXTENSION IF NOT EXISTS pgcrypto")
-        await conn.execute(extension)
-        await conn.run_sync(Base.metadata.create_all)
+    for attempt in range(10):
+        try:
+            async with engine.begin() as conn:
+                extension = text("CREATE EXTENSION IF NOT EXISTS pgcrypto")
+                await conn.execute(extension)
+                await conn.run_sync(Base.metadata.create_all)
+                break
+        except OperationalError as e:
+            if attempt == 9:
+                raise e
+            await asyncio.sleep(1)
+        else:
+            raise RuntimeError("Database connection failed after 10 attempts")
 
 
 async def get_async_session() -> AsyncGenerator[AsyncSession, None]:

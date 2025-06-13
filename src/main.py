@@ -95,20 +95,3 @@ app.include_router(
 app.include_router(
     activity_router, prefix=f"/api/{VERSION}/activities"
 )
-
-
-def main():
-    """
-    Starts the FastAPI app.
-
-    This is the entry point for the application, and should not be imported
-    anywhere else.
-
-    :return: None
-    """
-    import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
-
-
-if __name__ == "__main__":
-    main()
