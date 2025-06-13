@@ -3,10 +3,13 @@
 import uuid
 from typing import List, Optional
 from fastapi import Depends, HTTPException
-from sqlalchemy import select, asc, desc
+from sqlalchemy import or_, select, asc, desc
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import joinedload
 from src.db.db_session import get_async_session
 from src.models.project_models import Project
+from src.models.team_models import Team, TeamMember
 from src.services.team_services import TeamServices
 
 
@@ -45,7 +48,7 @@ class ProjectServices:
             await self.session.commit()
             await self.session.refresh(project)
             return project
-        except Exception:
+        except SQLAlchemyError:
             return None
 
     async def get_all_projects(
@@ -75,7 +78,7 @@ class ProjectServices:
             result = await self.session.execute(statement)
             projects = result.scalars().all()
             return projects
-        except Exception:
+        except SQLAlchemyError:
             return None
 
     async def get_all_team_projects(
@@ -109,7 +112,62 @@ class ProjectServices:
             result = await self.session.execute(statement)
             projects = result.scalars().all()
             return projects
-        except Exception:
+        except SQLAlchemyError:
+            return None
+
+    async def get_team_projects_for_user(self, user_id: uuid.UUID) -> List[Project] | None:
+        """
+        Retrieve all projects that the user is a member of from the database.
+
+        Args:
+        user_id (uuid.UUID): The ID of the user whose projects to retrieve.
+
+        Returns:
+        list: A list of all projects that the user is a member of.
+        """
+        try:
+            statement = (
+                select(Project)
+                .join(Team, Project.team_id == Team.id)
+                .join(TeamMember, TeamMember.team_id == Team.id)
+                .where(TeamMember.user_id == user_id)
+                .options(joinedload(Project.team), joinedload(Project.user))
+            )
+            result = await self.session.execute(statement)
+            return result.scalars().all()
+        except SQLAlchemyError:
+            return None
+
+    async def get_project_if_member(
+        self, project_id: uuid.UUID, user_id: uuid.UUID
+    ) -> Project | None:
+        """
+        Retrieve a project from the database if the user is a member of the project.
+
+        Args:
+        project_id (uuid.UUID): The ID of the project to retrieve.
+        user_id (uuid.UUID): The ID of the user who is a member of the project.
+
+        Returns:
+        Project: The project if the user is a member of the project, otherwise None.
+        """
+        try:
+            statement = (
+                select(Project)
+                .outerjoin(Team, Project.team_id == Team.id)
+                .outerjoin(TeamMember, TeamMember.team_id == Team.id)
+                .where(
+                    Project.id == project_id,
+                    or_(
+                        TeamMember.user_id == user_id,
+                        Project.user_id == user_id
+                    )
+                )
+                .options(joinedload(Project.team), joinedload(Project.user))
+            )
+            result = await self.session.execute(statement)
+            return result.scalar_one_or_none()
+        except SQLAlchemyError:
             return None
 
     async def get_user_project_by_id(
@@ -132,7 +190,7 @@ class ProjectServices:
             result = await self.session.execute(statement)
             project = result.scalars().first()
             return project
-        except Exception:
+        except SQLAlchemyError:
             return None
 
     async def get_user_project_by_title(
@@ -155,7 +213,7 @@ class ProjectServices:
             result = await self.session.execute(statement)
             project = result.scalars().first()
             return project
-        except Exception:
+        except SQLAlchemyError:
             return None
 
     async def update_project(
@@ -185,7 +243,7 @@ class ProjectServices:
                 await self.session.refresh(project)
                 return project
             return None
-        except Exception:
+        except SQLAlchemyError:
             return None
 
     async def delete_project(
@@ -212,7 +270,7 @@ class ProjectServices:
                 await self.session.commit()
                 return True
             return None
-        except Exception:
+        except SQLAlchemyError:
             return None
 
 
