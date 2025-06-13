@@ -4,11 +4,11 @@ import uuid
 from datetime import date
 from typing import List, Optional
 from fastapi import Depends
-from sqlalchemy import select, asc, desc
+from sqlalchemy import or_, select, asc, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 from src.db.db_session import get_async_session
-from src.models.task_models import Task, TaskComment
+from src.models.task_models import TaskStatus, TaskPriority, Task, TaskComment
 
 
 class TaskServices:
@@ -37,12 +37,14 @@ class TaskServices:
             task = Task(**data)
             self.session.add(task)
             await self.session.commit()
+            await self.session.refresh(task)
             return task
         except SQLAlchemyError:
+            await self.session.rollback()
             return None
 
     async def get_tasks_by_project_id(
-        self, project_id: uuid.UUID,
+        self, project_id: uuid.UUID, user_id: uuid.UUID,
         order: str = "asc", limit: int = 10, offset: int = 0
     ) -> List[Task]:
         """
@@ -50,12 +52,18 @@ class TaskServices:
 
         Args:
         project_id (uuid.UUID): The ID of the project to retrieve tasks for.
+        user_id (uuid.UUID): The ID of the user to retrieve tasks for.
+        order (str, optional): The order in which to retrieve tasks. Defaults to "asc".
+        limit (int, optional): The maximum number of tasks to retrieve. Defaults to 10.
+        offset (int, optional): The number of tasks to skip before retrieving tasks. Defaults to 0.
 
         Returns:
         List[Task]: A list of tasks associated with the project.
         """
         try:
-            statement = select(Task).where(Task.project_id == project_id)
+            statement = select(Task).where(Task.project_id == project_id,
+                or_(Task.user_id == user_id, Task.assigned_id == user_id)
+            )
 
             if order == "desc":
                 statement = statement.order_by(desc(Task.created_at))
@@ -69,18 +77,21 @@ class TaskServices:
         except SQLAlchemyError:
             return None
 
-    async def get_task_by_id(self, task_id: uuid.UUID) -> Task | None:
+    async def get_task_by_id(self, task_id: uuid.UUID, user_id: uuid.UUID) -> Task | None:
         """
         Get a task by its ID.
 
         Args:
         task_id (uuid.UUID): The ID of the task to retrieve.
+        user_id (uuid.UUID): The ID of the user who created the task.
 
         Returns:
         Task: The task with the specified ID.
         """
         try:
-            statement = select(Task).where(Task.id == task_id)
+            statement = select(Task).where(Task.id == task_id,
+                or_(Task.user_id == user_id, Task.assigned_id == user_id)
+            )
             result = await self.session.execute(statement)
             task = result.scalars().first()
             return task
@@ -89,7 +100,7 @@ class TaskServices:
 
     async def filter_tasks(
         self, project_id: uuid.UUID, task_status: Optional[str],
-        task_priority: Optional[str],
+        task_priority: Optional[str], user_id: uuid.UUID,
         assignee_id: Optional[uuid.UUID], due_date: Optional[date]
     ) -> List[Task]:
         """
@@ -99,6 +110,7 @@ class TaskServices:
             project_id (uuid.UUID): The ID of the project to filter tasks by.
             task_status (str, optional): The status of the tasks to filter by.
             task_priority (str, optional): The priority of the tasks to filter by.
+            user_id (uuid.UUID): The ID of the user who created the tasks.
             assignee_id (uuid.UUID, optional): The ID of the assignee to filter tasks by.
             due_date (date, optional): The due date to filter tasks by.
 
@@ -106,12 +118,16 @@ class TaskServices:
             List[Task]: A list of tasks that match the filter criteria.
         """
         try:
-            statement = select(Task).where(Task.project_id == project_id)
+            statement = select(Task).where(
+                Task.project_id == project_id, or_(
+                    Task.user_id == user_id, Task.assigned_id == user_id
+                )
+            )
             if task_status:
-                statement = statement.where(Task.status == task_status)
+                statement = statement.where(Task.status == TaskStatus(task_status))
 
             if task_priority:
-                statement = statement.where(Task.priority == task_priority)
+                statement = statement.where(Task.priority == TaskPriority(task_priority))
 
             if assignee_id:
                 statement = statement.where(Task.assigned_id == assignee_id)
@@ -125,18 +141,19 @@ class TaskServices:
         except SQLAlchemyError:
             return None
 
-    async def delete_task(self, task_id: uuid.UUID):
+    async def delete_task(self, task_id: uuid.UUID, user_id: uuid.UUID) -> bool:
         """
         Delete a task by its ID.
 
         Args:
         task_id (uuid.UUID): The ID of the task to delete.
+        user_id (uuid.UUID): The ID of the user who created the task.
 
         Returns:
         bool: True if the task was deleted. Or None if the task was not found.
         """
         try:
-            statement = select(Task).where(Task.id == task_id)
+            statement = select(Task).where(Task.id == task_id, Task.user_id == user_id)
             result = await self.session.execute(statement)
             task = result.scalars().first()
             if task:
@@ -147,24 +164,36 @@ class TaskServices:
         except SQLAlchemyError:
             return None
 
-    async def update_task(self, task_id: uuid.UUID, data: dict) -> Task | None:
+    async def update_task(
+        self, task_id: uuid.UUID,
+        user_id: uuid.UUID, data: dict
+    ) -> Task | None:
         """
         Update a task by its ID in the database.
 
         Args:
         task_id (uuid.UUID): The ID of the task to update.
+        user_id (uuid.UUID): The ID of the user who is updating the task.
         data (dict): The data to update the task with.
 
         Returns:
         Task: The updated task. Or None if the task was not found.
         """
         try:
-            statement = select(Task).where(Task.id == task_id)
+            statement = select(Task).where(
+                Task.id == task_id, or_(
+                    Task.assigned_id == user_id, Task.user_id == user_id
+                )
+            )
             result = await self.session.execute(statement)
             task = result.scalars().first()
             if task:
+                ALLOWED_FIELDS = {
+                    "title", "description", "status", "priority", "due_date", "assigned_id"
+                }
                 for key, value in data.items():
-                    setattr(task, key, value)
+                    if key in ALLOWED_FIELDS:
+                        setattr(task, key, value)
                 await self.session.commit()
                 await self.session.refresh(task)
                 return task
@@ -176,7 +205,7 @@ class TaskServices:
 class TaskCommentService:
     """Task comment service."""
 
-    def __init__(self, session: AsyncSession):        
+    def __init__(self, session: AsyncSession):
         """
         Initialize the TaskCommentService with a database session.
 
@@ -202,14 +231,16 @@ class TaskCommentService:
             await self.session.refresh(comment)
             return comment
         except SQLAlchemyError:
+            await self.session.rollback()
             return None
 
-    async def get_comment_by_id(self, comment_id: uuid.UUID) -> TaskComment | None:
+    async def get_comment_by_id(self, comment_id: uuid.UUID, user_id: uuid.UUID) -> TaskComment | None:
         """
         Get a comment by its ID.
 
         Args:
         comment_id (uuid.UUID): The ID of the comment to retrieve.
+        user_id (uuid.UUID): The ID of the user who is a member of the team.
 
         Returns:
         Task: The comment with the specified ID.
@@ -222,12 +253,13 @@ class TaskCommentService:
         except SQLAlchemyError:
             return None
 
-    async def get_comments_by_task_id(self, task_id: uuid.UUID) -> List[TaskComment]:
+    async def get_comments_by_task_id(self, task_id: uuid.UUID, user_id: uuid.UUID) -> List[TaskComment]:
         """
         Get comments for a specific task.
 
         Args:
         task_id (uuid.UUID): The ID of the task to retrieve comments for.
+        user_id (uuid.UUID): The ID of the user who is a member of the team.
 
         Returns:
         List[TaskComment]: A list of comments associated with the task.

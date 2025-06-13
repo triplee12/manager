@@ -67,7 +67,7 @@ class Task(Base):
     user: Mapped[User] = relationship(back_populates="tasks")
     assigned_id: Mapped[UUID_ID] = mapped_column(ForeignKey("user.id"), nullable=True)
     assigneds = relationship("User", foreign_keys=[assigned_id])
-    comments: Mapped[list[TaskComment]] = relationship(back_populates="task")
+    comments: Mapped[list[TaskComment]] = relationship(back_populates="task", cascade="all, delete")
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False, default=datetime.now
     )
@@ -86,7 +86,7 @@ class Task(Base):
             f"user_id={self.user_id!r}, assignee_id={self.assigned_id!r}, status={self.status!r}, " \
             f" priority={self.priority!r}, due_date={self.due_date!r}, " \
             f"created_at={self.created_at!r}, updated_at={self.updated_at!r})"
-    
+
     def __str__(self) -> str:
         """Return a string representation of the Task object."""
         return self.__repr__()
@@ -115,7 +115,7 @@ class TaskComment(Base):
         TIMESTAMP(timezone=True), nullable=False,
         default=datetime.now, onupdate=datetime.now
     )
-    
+
     def __repr__(self) -> str:
         """Return a string representation of the TaskComment object.
 
