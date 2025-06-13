@@ -54,6 +54,67 @@ async def get_all_projects(
 
 
 @project_router.get(
+    "/team/project",
+    response_model=List[ReadProject],
+    status_code=status.HTTP_200_OK
+)
+async def get_team_projects_for_user(
+    project_services: ProjectServices = Depends(get_project_services),
+    user: User = Depends(current_active_user)
+) -> List[ReadProject]:
+    """
+    Retrieve all projects that the user is a member of from the database.
+
+    Args:
+    user_id (uuid.UUID): The ID of the user whose projects to retrieve.
+
+    Returns:
+    list: A list of all projects that the user is a member of.
+    """
+    try:
+        projects = await project_services.get_team_projects_for_user(
+            user_id=user.id
+        )
+        if not projects:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail='Projects not found for you',
+            )
+        return projects
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail='Error retrieving projects',
+        ) from e
+
+
+@project_router.get(
+    "/{project_id}/team/is_member", status_code=status.HTTP_200_OK,
+    response_model=ReadProject
+)
+async def get_project_if_member(
+    project_id: uuid.UUID,
+    project_services: ProjectServices = Depends(get_project_services),
+    user: User = Depends(current_active_user)
+):
+    try:
+        project = await project_services.get_project_if_member(
+            project_id=project_id, user_id=user.id
+        )
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail='Project not found',
+            )
+        return project
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail='Error retrieving project',
+        ) from e
+
+
+@project_router.get(
     "/{project_id}", status_code=status.HTTP_200_OK,
     response_model=ReadProject
 )
@@ -124,7 +185,7 @@ async def get_project_by_title(
 
 
 @project_router.get(
-    "team/{team_id}", status_code=status.HTTP_200_OK,
+    "/team/{team_id}", status_code=status.HTTP_200_OK,
     response_model=List[ReadProject]
 )
 async def get_projects_by_team_id(
@@ -277,7 +338,7 @@ async def update_project(
 
 
 @project_router.delete(
-    "/{project_id}/delete/project", status_code=status.HTTP_204_NO_CONTENT
+    "/{project_id}/delete", status_code=status.HTTP_204_NO_CONTENT
 )
 async def delete_project(
     project_id: uuid.UUID,

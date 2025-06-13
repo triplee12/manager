@@ -138,7 +138,7 @@ async def get_team_member_by_id(
 
 
 @team_member_router.delete(
-    "/{team_member_id}", status_code=status.HTTP_200_OK,
+    "/{team_member_id}/delete", status_code=status.HTTP_200_OK,
     response_model=ReadTeamMember
 )
 async def delete_team_member_by_id(
