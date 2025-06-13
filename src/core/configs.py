@@ -9,7 +9,9 @@ class Settings(BaseSettings):
     PASSWORD : str
     DB_USER : str
     DB_NAME : str
+    DB_NAME_TEST : str
     DB_URL: str
+    DB_URL_TEST: str
     OAUTH_SECRET : str
     ACCESS_TOKEN_EXPIRY_WEEKS : int
     ALGORITHM : str
