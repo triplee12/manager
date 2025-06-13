@@ -31,5 +31,14 @@ services:
       ACCESS_TOKEN_EXPIRY_WEEKS: ${ACCESS_TOKEN_EXPIRY_WEEKS}
       ALGORITHM: ${ALGORITHM}
 
+  # test_runner:
+  #   build: .
+  #   command: pytest
+  #   depends_on:
+  #     - db
+  #   environment:
+  #     POSTGRES_DB: ${DB_NAME_TEST}
+  #     DATABASE_URL: ${DB_URL_TEST}
+
 volumes:
   postgres_data:

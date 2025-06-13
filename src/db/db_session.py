@@ -13,7 +13,7 @@ PASSWORD = urllib.parse.quote(settings.PASSWORD, safe="")
 DB_NAME = settings.DB_NAME
 DB_USER = settings.DB_USER
 
-if settings.ENV == "env":
+if settings.ENV == "dev":
     DB_URL = f"postgresql+asyncpg://{DB_USER}:{PASSWORD}@localhost:5432/{DB_NAME}"
 else:
     DB_URL = settings.DB_URL
@@ -23,7 +23,6 @@ engine = create_async_engine(
     echo=True,
     pool_pre_ping=True
 )
-
 async_session_maker = async_sessionmaker(engine, expire_on_commit=False)
 
 

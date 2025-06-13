@@ -150,7 +150,7 @@ async def get_project_by_id(
 
 
 @project_router.get(
-    "/{title}", status_code=status.HTTP_200_OK,
+    "title/{title}", status_code=status.HTTP_200_OK,
     response_model=ReadProject
 )
 async def get_project_by_title(
@@ -285,7 +285,8 @@ async def create_project(
     uuid.UUID: The created project.
     """
     try:
-        project_data = project.model_dump().update(user_id=user.id)
+        project_data = project.model_dump()
+        project_data["user_id"] = user.id
         new_project = await project_services.create_project(data=project_data)
         if not new_project:
             raise HTTPException(
