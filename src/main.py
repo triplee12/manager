@@ -12,6 +12,7 @@ from src.api.v1.users.user_routes import user_router
 from src.api.v1.teams import team_routes, member_routes
 from src.api.v1.projects.project_routes import project_router
 from src.api.v1.tasks import task_routes, comment_routes
+from src.api.v1.activities.activity_routes import activity_router
 
 
 @asynccontextmanager
@@ -90,6 +91,9 @@ app.include_router(
 )
 app.include_router(
     comment_routes.comment_router, prefix=f"/api/{VERSION}/comments"
+)
+app.include_router(
+    activity_router, prefix=f"/api/{VERSION}/activities"
 )
 
 
