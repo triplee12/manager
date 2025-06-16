@@ -8,8 +8,61 @@ from src.models.user_models import User
 from src.services.task_services import TaskServices, get_task_services
 from src.schemas.task_schemas import CreateTask, ReadTask, UpdateTask
 from src.api.v1.auth.auths import current_active_user
+from src.models.activity_models import ActivityType
+from src.services.activity_services import ActivityServices, get_activity_service
 
 task_router = APIRouter(tags=["tasks"])
+
+
+@task_router.post(
+    "/create/new", status_code=status.HTTP_201_CREATED,
+    response_model=Optional[ReadTask]
+)
+async def create_task(
+    task: CreateTask,
+    task_manager: TaskServices = Depends(get_task_services),
+    user: User = Depends(current_active_user),
+    activity_logs: ActivityServices = Depends(get_activity_service)
+) -> Optional[ReadTask]:
+    """
+    Create a new task.
+
+    Args:
+        task (CreateTask): New task to be created.
+        task_manager (TaskServices, optional): Defaults to Depends(get_task_services).
+        user (User, optional): Defaults to Depends(current_active_user).
+
+    Returns:
+        Optional[ReadTask]: _description_
+    """
+    try:
+        task_data = task.model_dump()
+        task_data["user_id"] = user.id
+        new_task = await task_manager.create_task(task_data)
+        if not new_task:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Error creating task"
+            )
+        data={
+            "user_id": new_task.user_id,
+            "task_id": new_task.id,
+            "project_id": new_task.project_id,
+            "description": f"A new Task with id {str(new_task.id)} has been created.",
+            "activity_type": ActivityType.CREATE,
+            "entity": "task",
+            "entity_id": new_task.id
+        }
+
+        await activity_logs.create_activity(
+            activity_data=data
+        )
+        return new_task
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Server error"
+        ) from e
 
 
 @task_router.get(
@@ -131,43 +184,6 @@ async def filter_tasks(
         ) from e
 
 
-@task_router.post(
-    "/create/new", status_code=status.HTTP_201_CREATED,
-    response_model=Optional[ReadTask]
-)
-async def create_task(
-    task: CreateTask,
-    task_manager: TaskServices = Depends(get_task_services),
-    user: User = Depends(current_active_user)
-) -> Optional[ReadTask]:
-    """
-    Create a new task.
-
-    Args:
-        task (CreateTask): New task to be created.
-        task_manager (TaskServices, optional): Defaults to Depends(get_task_services).
-        user (User, optional): Defaults to Depends(current_active_user).
-
-    Returns:
-        Optional[ReadTask]: _description_
-    """
-    try:
-        task_data = task.model_dump()
-        task_data["user_id"] = user.id
-        new_task = await task_manager.create_task(task_data)
-        if not new_task:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Error creating task"
-            )
-        return new_task
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Server error"
-        ) from e
-
-
 @task_router.patch(
     "/{task_id}/update", status_code=status.HTTP_200_OK,
     response_model=Optional[ReadTask]
@@ -176,7 +192,8 @@ async def update_task(
     task_id: uuid.UUID,
     task: UpdateTask,
     task_manager: TaskServices = Depends(get_task_services),
-    user: User = Depends(current_active_user)
+    user: User = Depends(current_active_user),
+    activity_logs: ActivityServices = Depends(get_activity_service)
 ) -> Optional[ReadTask]:
     """
     Update a task.
@@ -200,6 +217,19 @@ async def update_task(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Error updating task"
             )
+        data={
+            "user_id": updated_task.user_id,
+            "task_id": updated_task.id,
+            "project_id": updated_task.project_id,
+            "description": f"Task with id {str(updated_task.id)} has been updated.",
+            "activity_type": ActivityType.UPDATE,
+            "entity": "task",
+            "entity_id": updated_task.id
+        }
+
+        await activity_logs.create_activity(
+            activity_data=data
+        )
         return updated_task
     except Exception as e:
         raise HTTPException(
@@ -215,7 +245,8 @@ async def update_task(
 async def delete_task(
     task_id: uuid.UUID,
     task_manager: TaskServices = Depends(get_task_services),
-    user: User = Depends(current_active_user)
+    user: User = Depends(current_active_user),
+    activity_logs: ActivityServices = Depends(get_activity_service)
 ) -> Optional[ReadTask]:
     """
     Delete a task.
@@ -235,6 +266,19 @@ async def delete_task(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Task not found"
             )
+        data={
+            "user_id": deleted_task.user_id,
+            "task_id": deleted_task.id,
+            "project_id": deleted_task.project_id,
+            "description": f"Task with id {str(deleted_task.id)} has been deleted.",
+            "activity_type": ActivityType.DELETE,
+            "entity": "task",
+            "entity_id": deleted_task.id
+        }
+
+        await activity_logs.create_activity(
+            activity_data=data
+        )
         return
     except Exception as e:
         raise HTTPException(

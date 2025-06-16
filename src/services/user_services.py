@@ -58,17 +58,17 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         await self.session.refresh(user)
 
         user_id = user.id
-        # data={
-        #         "user_id": user_id,
-        #         "description": f"User {user_id} has registered.",
-        #         "activity_type": ActivityType.CREATE,
-        #         "entity": "user",
-        #         "entity_id": user_id,
-        #     }
+        data={
+                "user_id": user_id,
+                "description": f"A new User with id {str(user_id)} has registered.",
+                "activity_type": ActivityType.CREATE,
+                "entity": "user",
+                "entity_id": user_id,
+            }
 
-        # await self.activity_logs.create_activity(
-        #     activity_data=data
-        # )
+        await self.activity_logs.create_activity(
+            activity_data=data
+        )
         print(
             f"User {user_id} has registered from {request.client.host}"
         )
@@ -248,7 +248,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         await self.activity_logs.create_activity(
             activity_data = {
                 "user_id": user.id,
-                "description": f"User {user.id} has been updated with {update_dict}",
+                "description": f"User with id {str(user.id)} has been updated.",
                 "activity_type": ActivityType.UPDATE,
                 "entity": "user",
                 "entity_id": user.id
@@ -280,15 +280,6 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         user (User): The user that is about to be deleted.
         request (Optional[Request]): The request that initiated the deletion process.
         """
-        await self.activity_logs.create_activity(
-            activity_data = {
-                "user_id": user.id,
-                "description": f"User {user.id} is successfully deleted",
-                "activity_type": ActivityType.DELETE,
-                "entity": "user",
-                "entity_id": user.id
-            }
-        )
         print(f"User {user.id} is going to be deleted")
 
     async def on_after_delete(self, user: User, request: Optional[Request] = None):
@@ -299,6 +290,15 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
         user (User): The user that was deleted.
         request (Optional[Request]): The request that triggered the deletion.
         """
+        await self.activity_logs.create_activity(
+            activity_data = {
+                "user_id": user.id,
+                "description": f"User with id {str(user.id)} is successfully deleted",
+                "activity_type": ActivityType.DELETE,
+                "entity": "user",
+                "entity_id": user.id
+            }
+        )
         print(f"User {user.id} is successfully deleted")
 
 

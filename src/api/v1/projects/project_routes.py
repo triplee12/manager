@@ -7,6 +7,8 @@ from src.models.user_models import User
 from src.services.project_services import ProjectServices, get_project_services
 from src.schemas.project_schemas import CreateProject, ReadProject, UpdateProject
 from src.api.v1.auth.auths import current_active_user
+from src.models.activity_models import ActivityType
+from src.services.activity_services import ActivityServices, get_activity_service
 
 project_router = APIRouter(tags=["projects"])
 
@@ -18,7 +20,8 @@ project_router = APIRouter(tags=["projects"])
 async def create_project(
     project: CreateProject,
     user: User = Depends(current_active_user),
-    project_services: ProjectServices = Depends(get_project_services)
+    project_services: ProjectServices = Depends(get_project_services),
+    activity_logs: ActivityServices = Depends(get_activity_service)
 ) -> ReadProject:
     """
     Create a new project.
@@ -38,6 +41,19 @@ async def create_project(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail='Project already exists or team not found',
             )
+        data={
+            "user_id": new_project.user_id,
+            "team_id": new_project.team_id,
+            "project_id": new_project.id,
+            "description": f"A new Project with id {str(new_project.id)} has been created.",
+            "activity_type": ActivityType.CREATE,
+            "entity": "project",
+            "entity_id": new_project.id
+        }
+
+        await activity_logs.create_activity(
+            activity_data=data
+        )
         return new_project
     except Exception as e:
         raise HTTPException(
@@ -318,7 +334,8 @@ async def update_project(
     project_id: uuid.UUID,
     project: UpdateProject,
     project_services: ProjectServices = Depends(get_project_services),
-    user: User = Depends(current_active_user)
+    user: User = Depends(current_active_user),
+    activity_logs: ActivityServices = Depends(get_activity_service)
 ) -> ReadProject:
     """
     Update a project by its ID in the database.
@@ -339,6 +356,19 @@ async def update_project(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail='Project not found',
             )
+        data={
+            "user_id": updated_project.user_id,
+            "team_id": updated_project.team_id,
+            "project_id": updated_project.id,
+            "description": f"Project with id {str(updated_project.id)} has been updated.",
+            "activity_type": ActivityType.UPDATE,
+            "entity": "project",
+            "entity_id": updated_project.id
+        }
+
+        await activity_logs.create_activity(
+            activity_data=data
+        )
         return updated_project
     except Exception as e:
         raise HTTPException(
@@ -353,7 +383,8 @@ async def update_project(
 async def delete_project(
     project_id: uuid.UUID,
     project_services: ProjectServices = Depends(get_project_services),
-    user: User = Depends(current_active_user)
+    user: User = Depends(current_active_user),
+    activity_logs: ActivityServices = Depends(get_activity_service)
 ) -> None:
     """
     Delete a project by its ID from the database.
@@ -373,6 +404,19 @@ async def delete_project(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail='Project not found',
             )
+        data={
+            "user_id": deleted_project.user_id,
+            "team_id": deleted_project.team_id,
+            "project_id": deleted_project.id,
+            "description": f"Project with id {str(deleted_project.id)} has been deleted.",
+            "activity_type": ActivityType.DELETE,
+            "entity": "project",
+            "entity_id": deleted_project.id
+        }
+
+        await activity_logs.create_activity(
+            activity_data=data
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

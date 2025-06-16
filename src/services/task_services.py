@@ -9,8 +9,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError
 from src.db.db_session import get_async_session
 from src.models.task_models import TaskStatus, TaskPriority, Task, TaskComment
-from src.models.activity_models import ActivityType
-from src.services.activity_services import ActivityServices
 
 
 class TaskServices:
@@ -24,7 +22,6 @@ class TaskServices:
         session (AsyncSession): The database session for executing queries.
         """
         self.session = session
-        self.activity_logs = ActivityServices(self.session)
 
     async def create_task(self, data: dict) -> Task | None:
         """
@@ -41,19 +38,6 @@ class TaskServices:
             self.session.add(task)
             await self.session.commit()
             await self.session.refresh(task)
-            data={
-                "user_id": task.user_id,
-                "task_id": task.id,
-                "project_id": task.project_id,
-                "description": f"Task {task.id} has been created.",
-                "activity_type": ActivityType.CREATE,
-                "entity": "task",
-                "entity_id": task.id
-            }
-
-            await self.activity_logs.create_activity(
-                activity_data=data
-            )
             return task
         except SQLAlchemyError:
             await self.session.rollback()
@@ -173,22 +157,10 @@ class TaskServices:
             result = await self.session.execute(statement)
             task = result.scalars().first()
             if task:
-                data={
-                    "user_id": task.user_id,
-                    "task_id": task.id,
-                    "project_id": task.project_id,
-                    "description": f"Task {task.id} has been deleted.",
-                    "activity_type": ActivityType.DELETE,
-                    "entity": "task",
-                    "entity_id": task.id
-                }
-
-                await self.activity_logs.create_activity(
-                    activity_data=data
-                )
+                task_data = task
                 await self.session.delete(task)
                 await self.session.commit()
-                return True
+                return task_data
             return None
         except SQLAlchemyError:
             return None
@@ -225,19 +197,6 @@ class TaskServices:
                         setattr(task, key, value)
                 await self.session.commit()
                 await self.session.refresh(task)
-                data={
-                    "user_id": task.user_id,
-                    "task_id": task.id,
-                    "project_id": task.project_id,
-                    "description": f"Task {task.id} has been updated.",
-                    "activity_type": ActivityType.UPDATE,
-                    "entity": "task",
-                    "entity_id": task.id
-                }
-
-                await self.activity_logs.create_activity(
-                    activity_data=data
-                )
                 return task
             return None
         except SQLAlchemyError:
@@ -255,7 +214,6 @@ class TaskCommentService:
         session (AsyncSession): The database session for executing queries.
         """
         self.session = session
-        self.activity_logs = ActivityServices(self.session)
 
     async def create_comment(self, data: dict) -> TaskComment | None:
         """
@@ -272,19 +230,6 @@ class TaskCommentService:
             await self.session.add(comment)
             await self.session.commit()
             await self.session.refresh(comment)
-            data={
-                "user_id": comment.user_id,
-                "comment_id": comment.id,
-                "task_id": comment.task_id,
-                "description": f"Task {comment.id} has been created.",
-                "activity_type": ActivityType.CREATE,
-                "entity": "comment",
-                "entity_id": comment.id
-            }
-
-            await self.activity_logs.create_activity(
-                activity_data=data
-            )
             return comment
         except SQLAlchemyError:
             await self.session.rollback()
@@ -348,22 +293,10 @@ class TaskCommentService:
             result = await self.session.execute(statement)
             comment = result.scalars().first()
             if comment:
-                data={
-                    "user_id": comment.user_id,
-                    "comment_id": comment.id,
-                    "task_id": comment.task_id,
-                    "description": f"Task {comment.id} has been deleted.",
-                    "activity_type": ActivityType.DELETE,
-                    "entity": "comment",
-                    "entity_id": comment.id
-                }
-
-                await self.activity_logs.create_activity(
-                    activity_data=data
-                )
+                comment_data = comment
                 await self.session.delete(comment)
                 await self.session.commit()
-                return True
+                return comment_data
             return None
         except SQLAlchemyError:
             return None
@@ -394,19 +327,6 @@ class TaskCommentService:
                     setattr(comment, key, value)
                 await self.session.commit()
                 await self.session.refresh(comment)
-                data={
-                    "user_id": comment.user_id,
-                    "comment_id": comment.id,
-                    "task_id": comment.task_id,
-                    "description": f"Task {comment.id} has been updated.",
-                    "activity_type": ActivityType.UPDATE,
-                    "entity": "comment",
-                    "entity_id": comment.id
-                }
-
-                await self.activity_logs.create_activity(
-                    activity_data=data
-                )
                 return comment
             return None
         except SQLAlchemyError:

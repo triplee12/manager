@@ -23,7 +23,7 @@ class ActivityServices:
         """
         self.session = session
     
-    async def create_activity(self, activity_data: dict) -> ActivityLog | None:
+    async def create_activity(self, activity_data: dict):
         """
         Create a new activity log entry in the database.
 
@@ -31,14 +31,14 @@ class ActivityServices:
         activity_type (ActivityType): The type of activity to create.
         
         Returns:
-        ActivityLog: The created activity log entry.
+        None
         """
         try:
             activity = ActivityLog(**activity_data)
             self.session.add(activity)
             await self.session.commit()
-            return activity
-        except SQLAlchemyError:
+        except SQLAlchemyError as e:
+            print(e)
             await self.session.rollback()
             return None
 

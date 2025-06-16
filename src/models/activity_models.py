@@ -35,7 +35,7 @@ class ActivityLog(Base):
         primary_key=True, index=True,
         default=uuid.uuid4, server_default=text("gen_random_uuid()")
     )
-    user_id: Mapped[UUID_ID] = mapped_column(ForeignKey("user.id"), nullable=False)
+    user_id: Mapped[UUID_ID] = mapped_column(ForeignKey("user.id"), nullable=True)
     user: Mapped[User] = relationship(back_populates="activity_logs")
     project_id: Mapped[UUID_ID] = mapped_column(ForeignKey("projects.id"), nullable=True)
     project: Mapped["Project"] = relationship(back_populates="activity_logs")
@@ -46,10 +46,10 @@ class ActivityLog(Base):
     comment_id: Mapped[UUID_ID] = mapped_column(ForeignKey("task_comments.id"), nullable=True)
     task_comment: Mapped["TaskComment"] = relationship(back_populates="activity_logs")
     activity_type: Mapped[ActivityType] = mapped_column(
-        Enum(ActivityType, name="logs"), nullable=False
+        Enum(ActivityType, name="logs"), nullable=True
     )
-    entity: Mapped[str] = mapped_column(String(length=20), nullable=False)
-    entity_id: Mapped[UUID_ID] = mapped_column(String(length=67), nullable=False)
+    entity: Mapped[str] = mapped_column(String(length=20), nullable=True)
+    entity_id: Mapped[str] = mapped_column(String(length=100), nullable=True)
     description: Mapped[str] = mapped_column(String(length=320), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False, default=datetime.now

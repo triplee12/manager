@@ -7,6 +7,8 @@ from src.models.user_models import User
 from src.services.team_services import TeamServices, get_team_services
 from src.schemas.team_schemas import CreateTeam, ReadTeam, UpdateTeam
 from src.api.v1.auth.auths import current_active_user
+from src.models.activity_models import ActivityType
+from src.services.activity_services import ActivityServices, get_activity_service
 
 team_router = APIRouter(tags=["teams"])
 
@@ -18,7 +20,8 @@ team_router = APIRouter(tags=["teams"])
 async def create_team(
     team: CreateTeam,
     team_manager: TeamServices = Depends(get_team_services),
-    user: User = Depends(current_active_user)
+    user: User = Depends(current_active_user),
+    activity_logs: ActivityServices = Depends(get_activity_service)
 ) -> ReadTeam:
     """
     Create a new team.
@@ -44,8 +47,22 @@ async def create_team(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Team already exists"
             )
+        
+        data={
+            "user_id": new_team.user_id,
+            "team_id": new_team.id,
+            "description": f"Team {str(new_team.id)} has been created.",
+            "activity_type": ActivityType.CREATE,
+            "entity": "team",
+            "entity_id": new_team.id
+        }
+
+        await activity_logs.create_activity(
+            activity_data=data
+        )
         return new_team
     except Exception as e:
+        print(e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while creating the team"
@@ -308,7 +325,8 @@ async def get_total_members(
 async def update_team(
     team_id: uuid.UUID, team: UpdateTeam,
     team_manager: TeamServices = Depends(get_team_services),
-    user: User = Depends(current_active_user)
+    user: User = Depends(current_active_user),
+    activity_logs: ActivityServices = Depends(get_activity_service)
 ) -> ReadTeam:
     """
     Update a team by its ID in the database.
@@ -331,6 +349,19 @@ async def update_team(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Team not found"
             )
+
+        activity_data={
+            "user_id": updated_team.user_id,
+            "team_id": updated_team.id,
+            "description": f"Team {str(updated_team.id)} has been updated.",
+            "activity_type": ActivityType.UPDATE,
+            "entity": "team",
+            "entity_id": updated_team.id
+        }
+
+        await activity_logs.create_activity(
+            activity_data=activity_data
+        )
         return updated_team
     except Exception as e:
         raise HTTPException(
@@ -345,7 +376,8 @@ async def update_team(
 async def delete_team(
     team_id: uuid.UUID,
     team_manager: TeamServices = Depends(get_team_services),
-    user: User = Depends(current_active_user)
+    user: User = Depends(current_active_user),
+    activity_logs: ActivityServices = Depends(get_activity_service)
 ) -> None:
     """
     Delete a team by its ID from the database.
@@ -363,6 +395,18 @@ async def delete_team(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Team not found"
             )
+        data={
+            "user_id": user.id,
+            "team_id": team_id,
+            "description": f"Team {str(team_id)} has been deleted.",
+            "activity_type": ActivityType.DELETE,
+            "entity": "team",
+            "entity_id": team_id
+        }
+
+        await activity_logs.create_activity(
+            activity_data=data
+        )
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
