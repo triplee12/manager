@@ -48,7 +48,7 @@ async def create_project(
             "description": f"A new Project with id {str(new_project.id)} has been created.",
             "activity_type": ActivityType.CREATE,
             "entity": "project",
-            "entity_id": new_project.id
+            "entity_id": str(new_project.id)
         }
 
         await activity_logs.create_activity(
@@ -363,7 +363,7 @@ async def update_project(
             "description": f"Project with id {str(updated_project.id)} has been updated.",
             "activity_type": ActivityType.UPDATE,
             "entity": "project",
-            "entity_id": updated_project.id
+            "entity_id": str(updated_project.id)
         }
 
         await activity_logs.create_activity(
@@ -411,7 +411,7 @@ async def delete_project(
             "description": f"Project with id {str(deleted_project.id)} has been deleted.",
             "activity_type": ActivityType.DELETE,
             "entity": "project",
-            "entity_id": deleted_project.id
+            "entity_id": str(deleted_project.id)
         }
 
         await activity_logs.create_activity(

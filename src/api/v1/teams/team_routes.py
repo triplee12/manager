@@ -54,7 +54,7 @@ async def create_team(
             "description": f"Team {str(new_team.id)} has been created.",
             "activity_type": ActivityType.CREATE,
             "entity": "team",
-            "entity_id": new_team.id
+            "entity_id": str(new_team.id)
         }
 
         await activity_logs.create_activity(
@@ -356,7 +356,7 @@ async def update_team(
             "description": f"Team {str(updated_team.id)} has been updated.",
             "activity_type": ActivityType.UPDATE,
             "entity": "team",
-            "entity_id": updated_team.id
+            "entity_id": str(updated_team.id)
         }
 
         await activity_logs.create_activity(
@@ -401,7 +401,7 @@ async def delete_team(
             "description": f"Team {str(team_id)} has been deleted.",
             "activity_type": ActivityType.DELETE,
             "entity": "team",
-            "entity_id": team_id
+            "entity_id": str(team_id)
         }
 
         await activity_logs.create_activity(

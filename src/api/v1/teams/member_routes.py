@@ -56,7 +56,7 @@ async def create_team_member(
                             has been added to team {str(new_team_member.team_id)}.""",
             "activity_type": ActivityType.CREATE,
             "entity": "team_member",
-            "entity_id": new_team_member.id
+            "entity_id": str(new_team_member.id)
         }
 
         await activity_logs.create_activity(
@@ -216,7 +216,7 @@ async def delete_team_member_by_id(
                             has been removed from team {str(team_id)}.""",
             "activity_type": ActivityType.DELETE,
             "entity": "team_member",
-            "entity_id": team_member_id
+            "entity_id": str(team_member_id)
         }
         await activity_logs.create_activity(
             activity_data=data
