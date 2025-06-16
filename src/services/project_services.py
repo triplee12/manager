@@ -26,7 +26,7 @@ class ProjectServices:
         session (AsyncSession): The database session for executing queries.
         """
         self.session = session
-        self.team_services = TeamServices(session)
+        self.team_services = TeamServices(self.session)
         self.activity_logs = ActivityServices(self.session)
 
     async def create_project(self, data: dict) -> Optional[Project]:
@@ -263,8 +263,8 @@ class ProjectServices:
                     "user_id": project.user_id,
                     "team_id": project.team_id,
                     "project_id": project.id,
-                    "description": f"Project {project.id} has been created.",
-                    "activity_type": ActivityType.CREATE,
+                    "description": f"Project {project.id} has been updated.",
+                    "activity_type": ActivityType.UPDATE,
                     "entity": "project",
                     "entity_id": project.id
                 }
@@ -304,8 +304,8 @@ class ProjectServices:
                     "user_id": project.user_id,
                     "team_id": project.team_id,
                     "project_id": project.id,
-                    "description": f"Project {project.id} has been created.",
-                    "activity_type": ActivityType.CREATE,
+                    "description": f"Project {project.id} has been deleted.",
+                    "activity_type": ActivityType.DELETE,
                     "entity": "project",
                     "entity_id": project.id
                 }

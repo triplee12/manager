@@ -152,7 +152,8 @@ async def create_task(
         Optional[ReadTask]: _description_
     """
     try:
-        task_data = task.model_dump().update(user_id=user.id)
+        task_data = task.model_dump()
+        task_data["user_id"] = user.id
         new_task = await task_manager.create_task(task_data)
         if not new_task:
             raise HTTPException(

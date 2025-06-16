@@ -39,7 +39,21 @@ class TeamServices:
             self.session.add(team)
             await self.session.commit()
             await self.session.refresh(team)
-            return team
+            data={
+                "user_id": team.user_id,
+                "team_id": team.id,
+                "description": f"Team {team.id} has been created.",
+                "activity_type": ActivityType.CREATE,
+                "entity": "team",
+                "entity_id": team.id
+            }
+
+            log = await self.activity_logs.create_activity(
+                activity_data=data
+            )
+            if log:
+                return team
+            # return team
         except Exception as e:
             return None
     
@@ -189,7 +203,20 @@ class TeamServices:
                     setattr(team, key, value)
                 await self.session.commit()
                 await self.session.refresh(team)
-                return team
+                data={
+                    "user_id": team.user_id,
+                    "team_id": team.id,
+                    "description": f"Team {team.id} has been updated.",
+                    "activity_type": ActivityType.UPDATE,
+                    "entity": "team",
+                    "entity_id": team.id
+                }
+
+                log = await self.activity_logs.create_activity(
+                    activity_data=data
+                )
+                if log:
+                    return team
             return None
         except Exception as e:
             return None
@@ -211,7 +238,20 @@ class TeamServices:
         if team:
             await self.session.delete(team)
             await self.session.commit()
-            return True
+            data={
+                "user_id": team.user_id,
+                "team_id": team.id,
+                "description": f"Team {team.id} has been deleted.",
+                "activity_type": ActivityType.DELETE,
+                "entity": "team",
+                "entity_id": team.id
+            }
+
+            log = await self.activity_logs.create_activity(
+                activity_data=data
+            )
+            if log:
+                return True
         return False
 
 
@@ -226,6 +266,7 @@ class TeamMemberServices:
         session (AsyncSession): The database session for executing queries.
         """
         self.session = session
+        self.activity_logs = ActivityServices(self.session)
 
     async def add_member_to_team(self, team_owner_id: uuid.UUID, data: dict):
         """
@@ -248,7 +289,20 @@ class TeamMemberServices:
             self.session.add(member)
             await self.session.commit()
             await self.session.refresh(member)
-            return member
+            data={
+                "user_id": member.user_id,
+                "team_id": member.team_id,
+                "description": f"User with id {member.user_id} has been added to team {member.team_id}.",
+                "activity_type": ActivityType.CREATE,
+                "entity": "team_member",
+                "entity_id": member.id
+            }
+
+            log = await self.activity_logs.create_activity(
+                activity_data=data
+            )
+            if log:
+                return member
         except Exception as e:
             return None
 
@@ -334,7 +388,19 @@ class TeamMemberServices:
         if member:
             await self.session.delete(member)
             await self.session.commit()
-            return True
+            data={
+                "user_id": member.user_id,
+                "team_id": member.team_id,
+                "description": f"User with id {member.user_id} has been removed from team {member.team_id}.",
+                "activity_type": ActivityType.DELETE,
+                "entity": "team_member",
+                "entity_id": member.id
+            }
+            log = await self.activity_logs.create_activity(
+                activity_data=data
+            )
+            if log:
+                return True
         return False
 
 

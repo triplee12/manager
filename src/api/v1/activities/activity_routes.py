@@ -12,6 +12,34 @@ from src.models.user_models import User
 activity_router = APIRouter(tags=["activities"])
 
 
+@activity_router.post("/create/new", response_model=ReadActivity)
+async def create_activity(
+    activity: CreateActivity,
+    activity_services: ActivityServices = Depends(get_activity_service),
+    user: User = Depends(current_active_user),
+):
+    """
+    Create a new activity log.
+
+    Args:
+    activity (CreateActivity): The activity log to create.
+
+    Returns:
+    ReadActivity: The created activity log.
+    """
+    try:
+        activity_data = activity.model_dump()
+        activity_data["user_id"] = user.id
+        return await activity_services.create_activity(
+            activity_data=activity_data
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        ) from e
+
+
 @activity_router.get(
     "", response_model=List[ReadActivity]
 )
@@ -168,34 +196,6 @@ async def get_project_activities(
         ) from e
 
 
-@activity_router.post("/create/new", response_model=ReadActivity)
-async def create_activity(
-    activity: CreateActivity,
-    activity_services: ActivityServices = Depends(get_activity_service),
-    user: User = Depends(current_active_user),
-):
-    """
-    Create a new activity log.
-
-    Args:
-    activity (CreateActivity): The activity log to create.
-
-    Returns:
-    ReadActivity: The created activity log.
-    """
-    try:
-        activity_data = activity.model_dump()
-        activity_data["user_id"] = user.id
-        return await activity_services.create_activity(
-            activity=activity
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        ) from e
-
-
 @activity_router.get(
     "/{activity_id}/projects/{project_id}/activities", response_model=ReadActivity
 )
@@ -240,6 +240,18 @@ async def get_task_activities(
     activity_services: ActivityServices = Depends(get_activity_service),
     user: User = Depends(current_active_user),
 ):
+    """
+    Retrieve all activities for a specific task from the database.
+
+    Args:
+    task_id (UUID): The ID of the task whose activities to retrieve.
+    order (str): Order of the activities (asc or desc).
+    limit (int): Maximum number of activities to retrieve.
+    offset (int): Number of activities to skip.
+
+    Returns:
+    List[ReadActivity]: A list of ReadActivity objects representing the retrieved activities.
+    """
     try:
         activities = await activity_services.get_all_task_activities(
             task_id=task_id, user_id=user.id,
@@ -268,6 +280,20 @@ async def filter_activities(
     activity_services: ActivityServices = Depends(get_activity_service),
     user: User = Depends(current_active_user),
 ):
+    """
+    Retrieve activities filtered by type and entity from the database.
+
+    Args:
+    project_id (UUID): The ID of the project whose activities to retrieve.
+    activity_type (ActivityType): The type of activities to filter.
+    entity (Optional[str]): The entity to filter for. Defaults to None.
+    order (str): Order of the activities (asc or desc). Defaults to "asc".
+    limit (int): Maximum number of activities to retrieve. Defaults to 10.
+    offset (int): Number of activities to skip. Defaults to 0.
+
+    Returns:
+    List[ReadActivity]: A list of ReadActivity objects representing the filtered activities.
+    """
     try:
         activities = await activity_services.filter_activities(
             project_id=project_id,

@@ -32,12 +32,13 @@ async def create_comment(
         Optional[ReadTask]: _description_
     """
     try:
-        task_data = task.model_dump().update(user_id=user.id)
+        task_data = task.model_dump()
+        task_data["user_id"] = user.id
         new_comment = await comment_manager.create_comment(task_data)
         if not new_comment:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail="Error creating task"
+                detail="Error commenting on task"
             )
         return new_comment
     except Exception as e:
