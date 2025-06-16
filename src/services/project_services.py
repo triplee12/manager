@@ -60,12 +60,10 @@ class ProjectServices:
                 "entity_id": project.id
             }
 
-            log = await self.activity_logs.create_activity(
+            await self.activity_logs.create_activity(
                 activity_data=data
             )
-            if log:
-                return project
-            # return project
+            return project
         except SQLAlchemyError:
             return None
 
@@ -269,11 +267,10 @@ class ProjectServices:
                     "entity_id": project.id
                 }
 
-                log = await self.activity_logs.create_activity(
+                await self.activity_logs.create_activity(
                     activity_data=data
                 )
-                if log:
-                    return project
+                return project
             return None
         except SQLAlchemyError:
             return None
@@ -298,8 +295,6 @@ class ProjectServices:
             result = await self.session.execute(statement)
             project = result.scalars().first()
             if project:
-                await self.session.delete(project)
-                await self.session.commit()
                 data={
                     "user_id": project.user_id,
                     "team_id": project.team_id,
@@ -310,11 +305,12 @@ class ProjectServices:
                     "entity_id": project.id
                 }
 
-                log = await self.activity_logs.create_activity(
+                await self.activity_logs.create_activity(
                     activity_data=data
                 )
-                if log:
-                    return True
+                await self.session.delete(project)
+                await self.session.commit()
+                return True
             return None
         except SQLAlchemyError:
             return None

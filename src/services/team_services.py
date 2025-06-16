@@ -48,20 +48,19 @@ class TeamServices:
                 "entity_id": team.id
             }
 
-            log = await self.activity_logs.create_activity(
+            await self.activity_logs.create_activity(
                 activity_data=data
             )
-            if log:
-                return team
-            # return team
+            return team
         except Exception as e:
             return None
     
-    async def get_all_teams(self, order: str = "asc", limit: int = 20, offset: int = 0):
+    async def get_all_teams(self, owner_id: uuid.UUID, order: str = "asc", limit: int = 20, offset: int = 0):
         """
         Retrieve all teams from the database.
 
         Args:
+        owner_id (uuid.UUID): The ID of the user who owns the teams.
         order (str): Order of the teams (asc or desc).
         limit (int): Maximum number of teams to retrieve.
         offset (int): Number of teams to skip.
@@ -69,7 +68,7 @@ class TeamServices:
         Returns:
         List[Team]: A list of teams.
         """
-        statement = select(Team)
+        statement = select(Team).where(Team.user_id == owner_id)
         if order == "desc":
             statement = statement.order_by(desc(Team.created_at))
         else:
@@ -79,17 +78,20 @@ class TeamServices:
         teams = result.scalars().all()
         return teams
     
-    async def get_team_by_id(self, team_id: uuid.UUID):
+    async def get_team_by_id(self, team_id: uuid.UUID, owner_id: uuid.UUID):
         """
         Retrieve a team by its ID from the database.
 
         Args:
         team_id (uuid.UUID): The ID of the team to retrieve.
+        owner_id (uuid.UUID): The ID of the user who owns the team.
 
         Returns:
         Team: The team with the specified ID.
         """
-        statement = select(Team).where(Team.id == team_id)
+        statement = select(Team).where(
+            Team.id == team_id, Team.user_id == owner_id
+        )
         result = await self.session.execute(statement)
         team = result.scalars().first()
         return team
@@ -147,7 +149,7 @@ class TeamServices:
         Returns:
         Team: The team with the specified name associated with the user.
         """
-        statement = select(Team).where(Team.user_id == user_id, Team.name == team_name)
+        statement = select(Team).where(Team.user_id == user_id, Team.title == team_name)
         result = await self.session.execute(statement)
         team = result.scalars().first()
         return team
@@ -203,7 +205,7 @@ class TeamServices:
                     setattr(team, key, value)
                 await self.session.commit()
                 await self.session.refresh(team)
-                data={
+                activity_data={
                     "user_id": team.user_id,
                     "team_id": team.id,
                     "description": f"Team {team.id} has been updated.",
@@ -212,11 +214,10 @@ class TeamServices:
                     "entity_id": team.id
                 }
 
-                log = await self.activity_logs.create_activity(
-                    activity_data=data
+                await self.activity_logs.create_activity(
+                    activity_data=activity_data
                 )
-                if log:
-                    return team
+                return team
             return None
         except Exception as e:
             return None
@@ -236,8 +237,6 @@ class TeamServices:
         result = await self.session.execute(statement)
         team = result.scalars().first()
         if team:
-            await self.session.delete(team)
-            await self.session.commit()
             data={
                 "user_id": team.user_id,
                 "team_id": team.id,
@@ -247,11 +246,12 @@ class TeamServices:
                 "entity_id": team.id
             }
 
-            log = await self.activity_logs.create_activity(
+            await self.activity_logs.create_activity(
                 activity_data=data
             )
-            if log:
-                return True
+            await self.session.delete(team)
+            await self.session.commit()
+            return True
         return False
 
 
@@ -298,11 +298,10 @@ class TeamMemberServices:
                 "entity_id": member.id
             }
 
-            log = await self.activity_logs.create_activity(
+            await self.activity_logs.create_activity(
                 activity_data=data
             )
-            if log:
-                return member
+            return member
         except Exception as e:
             return None
 
@@ -386,8 +385,6 @@ class TeamMemberServices:
         result = await self.session.execute(statement)
         member = result.scalars().first()
         if member:
-            await self.session.delete(member)
-            await self.session.commit()
             data={
                 "user_id": member.user_id,
                 "team_id": member.team_id,
@@ -396,11 +393,12 @@ class TeamMemberServices:
                 "entity": "team_member",
                 "entity_id": member.id
             }
-            log = await self.activity_logs.create_activity(
+            await self.activity_logs.create_activity(
                 activity_data=data
             )
-            if log:
-                return True
+            await self.session.delete(member)
+            await self.session.commit()
+            return True
         return False
 
 
