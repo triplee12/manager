@@ -57,8 +57,9 @@ async def create_team(
     response_model=Optional[List[ReadTeam]]
 )
 async def get_all_teams(
-    order: str = Query(...),
-    limit: int = Query(...), offset: int = Query(...),
+    owner_id: Optional[uuid.UUID] = None,
+    order: Optional[str] = "asc",
+    limit: Optional[int] = 10, offset: Optional[int] = 0,
     team_manager: TeamServices = Depends(get_team_services),
     user: User = Depends(current_active_user)
 ) -> Optional[List[ReadTeam]]:
@@ -77,19 +78,25 @@ async def get_all_teams(
     HTTPException: If the user is not authorized, or if an error occurs.
     """
     try:
-        if not user.is_superuser and user.role != "admin":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized"
+        if user.is_superuser or user.role == "admin":
+            if not owner_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Owner ID is required for superusers"
+                )
+            teams = await team_manager.get_all_teams(
+                owner_id=owner_id, order=order, limit=limit, offset=offset
             )
+            return teams
         teams = await team_manager.get_all_teams(
-            order=order, limit=limit, offset=offset
+            owner_id=user.id, order=order, limit=limit, offset=offset
         )
         return teams
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while getting all teams"
-        )
+        ) from e
 
 
 @team_router.get(
@@ -97,7 +104,7 @@ async def get_all_teams(
     response_model=Optional[ReadTeam]
 )
 async def get_team_by_id(
-    team_id: uuid.UUID,
+    team_id: uuid.UUID, owner_id: Optional[uuid.UUID] = None,
     team_manager: TeamServices = Depends(get_team_services),
     user: User = Depends(current_active_user)
 ) -> Optional[ReadTeam]:
@@ -114,11 +121,21 @@ async def get_team_by_id(
     HTTPException: If the user is not authorized, or if the team is not found.
     """
     try:
-        if not user.is_superuser and user.role != "admin":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized"
+        if user.is_superuser and user.role == "admin":
+            if not owner_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Team owner ID is required for superusers"
+                )
+            team = await team_manager.get_team_by_id(
+                team_id=team_id, owner_id=owner_id
             )
-        team = await team_manager.get_team_by_id(team_id=team_id)
+            if not team:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND, detail="Team not found"
+                )
+            return team
+        team = await team_manager.get_team_by_id(team_id=team_id, owner_id=user.id)
         if not team:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Team not found"
@@ -128,11 +145,11 @@ async def get_team_by_id(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while getting the team"
-        )
+        ) from e
 
 
 @team_router.get(
-    "name/{team_name}/user", status_code=status.HTTP_200_OK,
+    "/name/{team_name}/user", status_code=status.HTTP_200_OK,
     response_model=Optional[ReadTeam]
 )
 async def get_user_team_by_name(
@@ -182,11 +199,11 @@ async def get_user_team_by_name(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while getting the team"
-        )
+        ) from e
 
 
 @team_router.get(
-    "id/{team_id}/user", status_code=status.HTTP_200_OK,
+    "/id/{team_id}/user", status_code=status.HTTP_200_OK,
     response_model=Optional[ReadTeam]
 )
 async def get_user_team_by_id(
@@ -219,7 +236,7 @@ async def get_user_team_by_id(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while getting the team"
-        )
+        ) from e
 
 
 @team_router.get(
@@ -250,7 +267,7 @@ async def get_user_total_teams(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while getting the total teams"
-        )
+        ) from e
 
 
 @team_router.get(
@@ -275,17 +292,13 @@ async def get_total_members(
                    retrieving the total number of members.
     """
     try:
-        if not user.is_superuser or user.role != "admin":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized"
-            )
         total_members = await team_manager.get_total_members(team_id=team_id)
         return total_members
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while getting the total members"
-        )
+        ) from e
 
 
 @team_router.patch(
@@ -323,7 +336,7 @@ async def update_team(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while updating the team"
-        )
+        ) from e
 
 
 @team_router.delete(
@@ -354,4 +367,4 @@ async def delete_team(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while deleting the team"
-        )
+        ) from e

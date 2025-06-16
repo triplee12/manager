@@ -51,11 +51,10 @@ class TaskServices:
                 "entity_id": task.id
             }
 
-            log = await self.activity_logs.create_activity(
+            await self.activity_logs.create_activity(
                 activity_data=data
             )
-            if log:
-                return task
+            return task
         except SQLAlchemyError:
             await self.session.rollback()
             return None
@@ -174,8 +173,6 @@ class TaskServices:
             result = await self.session.execute(statement)
             task = result.scalars().first()
             if task:
-                await self.session.delete(task)
-                await self.session.commit()
                 data={
                     "user_id": task.user_id,
                     "task_id": task.id,
@@ -186,11 +183,12 @@ class TaskServices:
                     "entity_id": task.id
                 }
 
-                log = await self.activity_logs.create_activity(
+                await self.activity_logs.create_activity(
                     activity_data=data
                 )
-                if log:
-                    return True
+                await self.session.delete(task)
+                await self.session.commit()
+                return True
             return None
         except SQLAlchemyError:
             return None
@@ -237,11 +235,10 @@ class TaskServices:
                     "entity_id": task.id
                 }
 
-                log = await self.activity_logs.create_activity(
+                await self.activity_logs.create_activity(
                     activity_data=data
                 )
-                if log:
-                    return task
+                return task
             return None
         except SQLAlchemyError:
             return None
@@ -285,11 +282,10 @@ class TaskCommentService:
                 "entity_id": comment.id
             }
 
-            log = await self.activity_logs.create_activity(
+            await self.activity_logs.create_activity(
                 activity_data=data
             )
-            if log:
-                return comment
+            return comment
         except SQLAlchemyError:
             await self.session.rollback()
             return None
@@ -352,8 +348,6 @@ class TaskCommentService:
             result = await self.session.execute(statement)
             comment = result.scalars().first()
             if comment:
-                await self.session.delete(comment)
-                await self.session.commit()
                 data={
                     "user_id": comment.user_id,
                     "comment_id": comment.id,
@@ -364,11 +358,12 @@ class TaskCommentService:
                     "entity_id": comment.id
                 }
 
-                log = await self.activity_logs.create_activity(
+                await self.activity_logs.create_activity(
                     activity_data=data
                 )
-                if log:
-                    return True
+                await self.session.delete(comment)
+                await self.session.commit()
+                return True
             return None
         except SQLAlchemyError:
             return None
@@ -409,11 +404,10 @@ class TaskCommentService:
                     "entity_id": comment.id
                 }
 
-                log = await self.activity_logs.create_activity(
+                await self.activity_logs.create_activity(
                     activity_data=data
                 )
-                if log:
-                    return comment
+                return comment
             return None
         except SQLAlchemyError:
             return None

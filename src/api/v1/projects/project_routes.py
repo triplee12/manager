@@ -13,13 +13,13 @@ project_router = APIRouter(tags=["projects"])
 
 @project_router.post(
     "/create/new", status_code=status.HTTP_201_CREATED,
-    response_model=uuid.UUID
+    response_model=ReadProject
 )
 async def create_project(
     project: CreateProject,
     user: User = Depends(current_active_user),
     project_services: ProjectServices = Depends(get_project_services)
-) -> uuid.UUID:
+) -> ReadProject:
     """
     Create a new project.
 
