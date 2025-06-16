@@ -11,6 +11,41 @@ from src.api.v1.auth.auths import current_active_user
 project_router = APIRouter(tags=["projects"])
 
 
+@project_router.post(
+    "/create/new", status_code=status.HTTP_201_CREATED,
+    response_model=uuid.UUID
+)
+async def create_project(
+    project: CreateProject,
+    user: User = Depends(current_active_user),
+    project_services: ProjectServices = Depends(get_project_services)
+) -> uuid.UUID:
+    """
+    Create a new project.
+
+    Args:
+    project (uuid.UUID): The project to be created.
+
+    Returns:
+    uuid.UUID: The created project.
+    """
+    try:
+        project_data = project.model_dump()
+        project_data["user_id"] = user.id
+        new_project = await project_services.create_project(data=project_data)
+        if not new_project:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail='Project already exists or team not found',
+            )
+        return new_project
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail='Error creating project',
+        ) from e
+
+
 @project_router.get(
     "",
     response_model=List[ReadProject],
@@ -97,6 +132,15 @@ async def get_project_if_member(
     project_services: ProjectServices = Depends(get_project_services),
     user: User = Depends(current_active_user)
 ):
+    """
+    Retrieve a project by its ID if the user is a member of the project.
+
+    Args:
+    project_id (uuid.UUID): The ID of the project to retrieve.
+
+    Returns:
+    ReadProject: The project if the user is a member of the project, otherwise None.
+    """
     try:
         project = await project_services.get_project_if_member(
             project_id=project_id, user_id=user.id
@@ -263,41 +307,6 @@ async def get_project_by_project_id_and_user_id(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail='Error retrieving project',
-        ) from e
-
-
-@project_router.post(
-    "/create/new", status_code=status.HTTP_201_CREATED,
-    response_model=uuid.UUID
-)
-async def create_project(
-    project: CreateProject,
-    user: User = Depends(current_active_user),
-    project_services: ProjectServices = Depends(get_project_services)
-) -> uuid.UUID:
-    """
-    Create a new project.
-
-    Args:
-    project (uuid.UUID): The project to be created.
-
-    Returns:
-    uuid.UUID: The created project.
-    """
-    try:
-        project_data = project.model_dump()
-        project_data["user_id"] = user.id
-        new_project = await project_services.create_project(data=project_data)
-        if not new_project:
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                detail='Project already exists or team not found',
-            )
-        return new_project
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail='Error creating project',
         ) from e
 
 

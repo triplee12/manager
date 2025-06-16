@@ -9,7 +9,7 @@ from src.core.configs import settings
 
 SECRET = settings.OAUTH_SECRET
 
-bearer_transport = BearerTransport(tokenUrl="auth/jwt/login")
+bearer_transport = BearerTransport(tokenUrl="/api/v1.0.0/auth/jwt/login")
 
 
 def get_jwt_strategy() -> JWTStrategy[models.UP, models.ID]:

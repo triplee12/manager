@@ -37,7 +37,8 @@ async def create_team(
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized"
             )
-        team_data = team.model_dump().update({"user_id": user.id})
+        team_data = team.model_dump()
+        team_data["user_id"] = user.id
         new_team = await team_manager.create_team(data=team_data)
         if not new_team:
             raise HTTPException(
@@ -131,7 +132,7 @@ async def get_team_by_id(
 
 
 @team_router.get(
-    "/{team_name}/user", status_code=status.HTTP_200_OK,
+    "name/{team_name}/user", status_code=status.HTTP_200_OK,
     response_model=Optional[ReadTeam]
 )
 async def get_user_team_by_name(
@@ -185,7 +186,7 @@ async def get_user_team_by_name(
 
 
 @team_router.get(
-    "/{team_id}/user", status_code=status.HTTP_200_OK,
+    "id/{team_id}/user", status_code=status.HTTP_200_OK,
     response_model=Optional[ReadTeam]
 )
 async def get_user_team_by_id(
