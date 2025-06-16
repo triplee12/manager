@@ -51,7 +51,7 @@ async def create_task(
             "description": f"A new Task with id {str(new_task.id)} has been created.",
             "activity_type": ActivityType.CREATE,
             "entity": "task",
-            "entity_id": new_task.id
+            "entity_id": str(new_task.id)
         }
 
         await activity_logs.create_activity(
@@ -224,7 +224,7 @@ async def update_task(
             "description": f"Task with id {str(updated_task.id)} has been updated.",
             "activity_type": ActivityType.UPDATE,
             "entity": "task",
-            "entity_id": updated_task.id
+            "entity_id": str(updated_task.id)
         }
 
         await activity_logs.create_activity(
@@ -273,7 +273,7 @@ async def delete_task(
             "description": f"Task with id {str(deleted_task.id)} has been deleted.",
             "activity_type": ActivityType.DELETE,
             "entity": "task",
-            "entity_id": deleted_task.id
+            "entity_id": str(deleted_task.id)
         }
 
         await activity_logs.create_activity(

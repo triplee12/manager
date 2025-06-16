@@ -50,7 +50,7 @@ async def create_comment(
             "description": f"A new comment {str(new_comment.id)} has been created.",
             "activity_type": ActivityType.CREATE,
             "entity": "comment",
-            "entity_id": new_comment.id
+            "entity_id": str(new_comment.id)
         }
 
         await activity_logs.create_activity(
@@ -180,7 +180,7 @@ async def update_comment(
             "description": f"Comment with id {str(updated_comment.id)} has been updated.",
             "activity_type": ActivityType.UPDATE,
             "entity": "comment",
-            "entity_id": updated_comment.id
+            "entity_id": str(updated_comment.id)
         }
 
         await activity_logs.create_activity(
@@ -231,7 +231,7 @@ async def delete_comment(
             "description": f"Comment with id {str(comment_id)} has been deleted.",
             "activity_type": ActivityType.DELETE,
             "entity": "comment",
-            "entity_id": comment_id
+            "entity_id": str(comment_id)
         }
 
         await activity_logs.create_activity(

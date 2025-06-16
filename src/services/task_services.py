@@ -141,7 +141,7 @@ class TaskServices:
         except SQLAlchemyError:
             return None
 
-    async def delete_task(self, task_id: uuid.UUID, user_id: uuid.UUID) -> bool:
+    async def delete_task(self, task_id: uuid.UUID, user_id: uuid.UUID) -> Task | None:
         """
         Delete a task by its ID.
 
@@ -150,7 +150,7 @@ class TaskServices:
         user_id (uuid.UUID): The ID of the user who created the task.
 
         Returns:
-        bool: True if the task was deleted. Or None if the task was not found.
+        Task: The deleted task.
         """
         try:
             statement = select(Task).where(Task.id == task_id, Task.user_id == user_id)
@@ -275,7 +275,7 @@ class TaskCommentService:
         except SQLAlchemyError:
             return None
 
-    async def delete_comment(self, comment_id: uuid.UUID, user_id: uuid.UUID) -> bool | None:
+    async def delete_comment(self, comment_id: uuid.UUID, user_id: uuid.UUID) -> TaskComment | None:
         """
         Delete a comment by its ID.
 
@@ -284,7 +284,7 @@ class TaskCommentService:
         user_id (uuid.UUID): The ID of the user who created the comment.
 
         Returns:
-        bool: True if the comment was deleted. Or None if the comment was not found.
+        Task: The deleted comment.
         """
         try:
             statement = select(TaskComment).where(

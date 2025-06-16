@@ -63,7 +63,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
                 "description": f"A new User with id {str(user_id)} has registered.",
                 "activity_type": ActivityType.CREATE,
                 "entity": "user",
-                "entity_id": user_id,
+                "entity_id": str(user_id),
             }
 
         await self.activity_logs.create_activity(
@@ -251,7 +251,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
                 "description": f"User with id {str(user.id)} has been updated.",
                 "activity_type": ActivityType.UPDATE,
                 "entity": "user",
-                "entity_id": user.id
+                "entity_id": str(user.id)
             }
         )
         print(f"User {user.id} has been updated with {update_dict}.")
@@ -296,7 +296,7 @@ class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
                 "description": f"User with id {str(user.id)} is successfully deleted",
                 "activity_type": ActivityType.DELETE,
                 "entity": "user",
-                "entity_id": user.id
+                "entity_id": str(user.id)
             }
         )
         print(f"User {user.id} is successfully deleted")
