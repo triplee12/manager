@@ -2,11 +2,13 @@
 
 from typing import List, Optional
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from src.models.user_models import User
 from src.services.team_services import TeamMemberServices, get_team_member_services
 from src.schemas.team_schemas import CreateTeamMember, ReadTeamMember
 from src.api.v1.auth.auths import current_active_user
+from src.models.activity_models import ActivityType
+from src.services.activity_services import ActivityServices, get_activity_service
 
 team_member_router = APIRouter(tags=["team members"])
 
@@ -18,7 +20,8 @@ team_member_router = APIRouter(tags=["team members"])
 async def create_team_member(
     team_member: CreateTeamMember,
     team_member_manager: TeamMemberServices = Depends(get_team_member_services),
-    user: User = Depends(current_active_user)
+    user: User = Depends(current_active_user),
+    activity_logs: ActivityServices = Depends(get_activity_service)
 ) -> ReadTeamMember:
     """
     Create a new team member.
@@ -46,6 +49,19 @@ async def create_team_member(
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT, detail="Team member already exists"
             )
+        data={
+            "user_id": new_team_member.user_id,
+            "team_id": new_team_member.team_id,
+            "description": f"""User with id {str(new_team_member.user_id)}
+                            has been added to team {str(new_team_member.team_id)}.""",
+            "activity_type": ActivityType.CREATE,
+            "entity": "team_member",
+            "entity_id": new_team_member.id
+        }
+
+        await activity_logs.create_activity(
+            activity_data=data
+        )
         return new_team_member
     except Exception as e:
         raise HTTPException(
@@ -59,8 +75,9 @@ async def create_team_member(
     response_model=List[ReadTeamMember]
 )
 async def get_all_team_members(
-    team_id: uuid.UUID, order: str = Query(...),
-    limit: int = Query(...), offset: int = Query(...),
+    team_id: uuid.UUID, owner_id: Optional[uuid.UUID] = None,
+    order: Optional[str] = "asc",
+    limit: Optional[int] = 10, offset: Optional[int] = 0,
     team_member_manager: TeamMemberServices = Depends(get_team_member_services),
     user: User = Depends(current_active_user)
 ) -> List[ReadTeamMember]:
@@ -69,6 +86,7 @@ async def get_all_team_members(
 
     Args:
     team_id (uuid.UUID): The ID of the team whose members to retrieve.
+    owner_id (uuid.UUID): The ID of the user who owns the team.
     order (str): Order of the team members (asc or desc).
     limit (int): Maximum number of team members to retrieve.
     offset (int): Number of team members to skip.
@@ -80,15 +98,22 @@ async def get_all_team_members(
     HTTPException: If the user is not authorized.
     """
     try:
-        if not user.is_superuser or user.role != "admin":
+        if user.is_superuser or user.role == "admin":
+            if not owner_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Owner ID is required"
+                )
             team_members = await team_member_manager.get_team_members(
-                team_id=team_id, team_owner_id=user.id,
+                team_id=team_id, team_owner_id=owner_id,
                 order=order, limit=limit, offset=offset
             )
             return team_members
         team_members = await team_member_manager.get_team_members(
-            team_id=team_id, order=order, limit=limit, offset=offset
-        )
+                team_id=team_id, team_owner_id=user.id,
+                order=order, limit=limit, offset=offset
+            )
+        return team_members
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -101,7 +126,7 @@ async def get_all_team_members(
     response_model=Optional[ReadTeamMember]
 )
 async def get_team_member_by_id(
-    team_member_id: uuid.UUID,
+    team_member_id: uuid.UUID, owner_id: Optional[uuid.UUID] = None,
     team_member_manager: TeamMemberServices = Depends(get_team_member_services),
     user: User = Depends(current_active_user)
 ) -> Optional[ReadTeamMember]:
@@ -110,6 +135,7 @@ async def get_team_member_by_id(
 
     Args:
     team_member_id (uuid.UUID): The ID of the team member to retrieve.
+    owner_id (uuid.UUID): The ID of the user who owns the team.
 
     Returns:
     ReadTeamMember: The team member with the specified ID.
@@ -118,18 +144,32 @@ async def get_team_member_by_id(
     HTTPException: If the user is not authorized, or if the team member is not found.
     """
     try:
-        if not user.is_superuser or user.role != "admin":  
+        if user.is_superuser or user.role == "admin":
+            if not owner_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Owner ID is required"
+                )
             team_member = await team_member_manager.get_member_by_id(
-                member_id=team_member_id, team_owner_id=user.id
+                member_id=team_member_id, team_owner_id=owner_id
             )
             if not team_member:
                 raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND, detail="Team member not found"
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Team member not found"
                 )
             return team_member
         team_member = await team_member_manager.get_member_by_id(
-            member_id=team_member_id
+            member_id=team_member_id, team_owner_id=user.id
         )
+        if not team_member:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Team member not found"
+            )
+        return team_member
+    except HTTPException as http_exc:
+        raise http_exc
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -138,14 +178,15 @@ async def get_team_member_by_id(
 
 
 @team_member_router.delete(
-    "/{team_member_id}/delete", status_code=status.HTTP_200_OK,
-    response_model=ReadTeamMember
+    "/{team_member_id}/delete",
+    status_code=status.HTTP_204_NO_CONTENT,
 )
 async def delete_team_member_by_id(
     team_member_id: uuid.UUID, team_id: uuid.UUID,
     team_member_manager: TeamMemberServices = Depends(get_team_member_services),
-    user: User = Depends(current_active_user)
-) -> ReadTeamMember:
+    user: User = Depends(current_active_user),
+    activity_logs: ActivityServices = Depends(get_activity_service)
+):
     """
     Delete a team member by its ID from the database.
 
@@ -154,7 +195,7 @@ async def delete_team_member_by_id(
     team_id (uuid.UUID): The ID of the team whose member to delete.
 
     Returns:
-    ReadTeamMember: The deleted team member.
+    None
 
     Raises:
     HTTPException: If the user is not authorized, or if the team member is not found.
@@ -165,9 +206,22 @@ async def delete_team_member_by_id(
         )
         if not team_member:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Team member not found"
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Team member not found"
             )
-        return team_member
+        data={
+            "user_id": team_member_id,
+            "team_id": team_id,
+            "description": f"""User with id {str(team_member_id)}
+                            has been removed from team {str(team_id)}.""",
+            "activity_type": ActivityType.DELETE,
+            "entity": "team_member",
+            "entity_id": team_member_id
+        }
+        await activity_logs.create_activity(
+            activity_data=data
+        )
+        return
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

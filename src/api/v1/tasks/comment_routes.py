@@ -7,6 +7,8 @@ from src.models.user_models import User
 from src.services.task_services import TaskCommentService, get_task_comment_services
 from src.schemas.task_schemas import CreateTaskComment, ReadTaskComment, UpdateTaskComment
 from src.api.v1.auth.auths import current_active_user
+from src.models.activity_models import ActivityType
+from src.services.activity_services import ActivityServices, get_activity_service
 
 comment_router = APIRouter(tags=["task comments"])
 
@@ -18,7 +20,8 @@ comment_router = APIRouter(tags=["task comments"])
 async def create_comment(
     task: CreateTaskComment,
     comment_manager: TaskCommentService = Depends(get_task_comment_services),
-    user: User = Depends(current_active_user)
+    user: User = Depends(current_active_user),
+    activity_logs: ActivityServices = Depends(get_activity_service)
 ) -> Optional[ReadTaskComment]:
     """
     Create a new comment.
@@ -40,6 +43,19 @@ async def create_comment(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Error commenting on task"
             )
+        data={
+            "user_id": new_comment.user_id,
+            "comment_id": new_comment.id,
+            "task_id": new_comment.task_id,
+            "description": f"A new comment {str(new_comment.id)} has been created.",
+            "activity_type": ActivityType.CREATE,
+            "entity": "comment",
+            "entity_id": new_comment.id
+        }
+
+        await activity_logs.create_activity(
+            activity_data=data
+        )
         return new_comment
     except Exception as e:
         raise HTTPException(
@@ -129,7 +145,8 @@ async def update_comment(
     comment_id: uuid.UUID,
     comment: UpdateTaskComment,
     comment_manager: TaskCommentService = Depends(get_task_comment_services),
-    user: User = Depends(current_active_user)
+    user: User = Depends(current_active_user),
+    activity_logs: ActivityServices = Depends(get_activity_service)
 ) -> Optional[ReadTaskComment]:
     """
     Update a comment.
@@ -156,6 +173,19 @@ async def update_comment(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Error updating comment"
             )
+        data={
+            "user_id": updated_comment.user_id,
+            "comment_id": updated_comment.id,
+            "task_id": updated_comment.task_id,
+            "description": f"Comment with id {str(updated_comment.id)} has been updated.",
+            "activity_type": ActivityType.UPDATE,
+            "entity": "comment",
+            "entity_id": updated_comment.id
+        }
+
+        await activity_logs.create_activity(
+            activity_data=data
+        )
         return updated_comment
     except Exception as e:
         raise HTTPException(
@@ -170,7 +200,8 @@ async def update_comment(
 async def delete_comment(
     comment_id: uuid.UUID,
     comment_manager: TaskCommentService = Depends(get_task_comment_services),
-    user: User = Depends(current_active_user)
+    user: User = Depends(current_active_user),
+    activity_logs: ActivityServices = Depends(get_activity_service)
 ) -> None:
     """
     Delete a comment by its ID.
@@ -193,6 +224,19 @@ async def delete_comment(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Comment not found"
             )
+        data={
+            "user_id": is_deleted.user_id,
+            "comment_id": comment_id,
+            "task_id": is_deleted.task_id,
+            "description": f"Comment with id {str(comment_id)} has been deleted.",
+            "activity_type": ActivityType.DELETE,
+            "entity": "comment",
+            "entity_id": comment_id
+        }
+
+        await activity_logs.create_activity(
+            activity_data=data
+        )
         return
     except Exception as e:
         raise HTTPException(

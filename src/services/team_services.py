@@ -7,8 +7,6 @@ from sqlalchemy import select, asc, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.db.db_session import get_async_session
 from src.models.team_models import Team, TeamMember
-from src.models.activity_models import ActivityType
-from src.services.activity_services import ActivityServices
 
 
 class TeamServices:
@@ -22,7 +20,6 @@ class TeamServices:
         session (AsyncSession): The database session for executing queries.
         """
         self.session = session
-        self.activity_logs = ActivityServices(self.session)
     
     async def create_team(self, data: dict) -> Optional[Team]:
         """
@@ -39,18 +36,6 @@ class TeamServices:
             self.session.add(team)
             await self.session.commit()
             await self.session.refresh(team)
-            data={
-                "user_id": team.user_id,
-                "team_id": team.id,
-                "description": f"Team {team.id} has been created.",
-                "activity_type": ActivityType.CREATE,
-                "entity": "team",
-                "entity_id": team.id
-            }
-
-            await self.activity_logs.create_activity(
-                activity_data=data
-            )
             return team
         except Exception as e:
             return None
@@ -205,18 +190,6 @@ class TeamServices:
                     setattr(team, key, value)
                 await self.session.commit()
                 await self.session.refresh(team)
-                activity_data={
-                    "user_id": team.user_id,
-                    "team_id": team.id,
-                    "description": f"Team {team.id} has been updated.",
-                    "activity_type": ActivityType.UPDATE,
-                    "entity": "team",
-                    "entity_id": team.id
-                }
-
-                await self.activity_logs.create_activity(
-                    activity_data=activity_data
-                )
                 return team
             return None
         except Exception as e:
@@ -237,18 +210,6 @@ class TeamServices:
         result = await self.session.execute(statement)
         team = result.scalars().first()
         if team:
-            data={
-                "user_id": team.user_id,
-                "team_id": team.id,
-                "description": f"Team {team.id} has been deleted.",
-                "activity_type": ActivityType.DELETE,
-                "entity": "team",
-                "entity_id": team.id
-            }
-
-            await self.activity_logs.create_activity(
-                activity_data=data
-            )
             await self.session.delete(team)
             await self.session.commit()
             return True
@@ -266,7 +227,6 @@ class TeamMemberServices:
         session (AsyncSession): The database session for executing queries.
         """
         self.session = session
-        self.activity_logs = ActivityServices(self.session)
 
     async def add_member_to_team(self, team_owner_id: uuid.UUID, data: dict):
         """
@@ -289,25 +249,13 @@ class TeamMemberServices:
             self.session.add(member)
             await self.session.commit()
             await self.session.refresh(member)
-            data={
-                "user_id": member.user_id,
-                "team_id": member.team_id,
-                "description": f"User with id {member.user_id} has been added to team {member.team_id}.",
-                "activity_type": ActivityType.CREATE,
-                "entity": "team_member",
-                "entity_id": member.id
-            }
-
-            await self.activity_logs.create_activity(
-                activity_data=data
-            )
             return member
         except Exception as e:
             return None
 
     async def get_team_members(
         self, team_id: uuid.UUID,
-        team_owner_id: Optional[uuid.UUID] = None,
+        team_owner_id: uuid.UUID,
         order: str = "asc", limit: int = 10, offset: int = 0
     ):
         """
@@ -323,11 +271,14 @@ class TeamMemberServices:
         Returns:
         List[TeamMember]: A list of team members.
         """
-        statement = select(TeamMember).where(TeamMember.team_id == team_id)
-        if team_owner_id:
-            statement = select(TeamMember).where(
-                TeamMember.team_id == team_id, TeamMember.team.user_id == team_owner_id
+        statement = (
+            select(TeamMember)
+            .join(Team)
+            .where(
+                TeamMember.team_id == team_id,
+                Team.user_id == team_owner_id
             )
+        )
         if order == "desc":
             statement = statement.order_by(desc(TeamMember.created_at))
         else:
@@ -338,7 +289,7 @@ class TeamMemberServices:
         return members
 
     async def get_member_by_id(
-        self, member_id: uuid.UUID, team_owner_id: Optional[uuid.UUID] = None
+        self, member_id: uuid.UUID, team_owner_id: uuid.UUID
     ):
         """
         Retrieve a member by its ID from the database.
@@ -350,11 +301,14 @@ class TeamMemberServices:
         Returns:
         TeamMember: The team member with the specified ID.
         """
-        statement = select(TeamMember).where(TeamMember.id == member_id)
-        if team_owner_id:
-            statement = select(TeamMember).where(
-                TeamMember.id == member_id, TeamMember.team.user_id == team_owner_id
+        statement = (
+            select(TeamMember)
+            .join(Team)
+            .where(
+                TeamMember.id == member_id,
+                Team.user_id == team_owner_id
             )
+        )
         result = await self.session.execute(statement)
         member = result.scalars().first()
         return member
@@ -385,17 +339,6 @@ class TeamMemberServices:
         result = await self.session.execute(statement)
         member = result.scalars().first()
         if member:
-            data={
-                "user_id": member.user_id,
-                "team_id": member.team_id,
-                "description": f"User with id {member.user_id} has been removed from team {member.team_id}.",
-                "activity_type": ActivityType.DELETE,
-                "entity": "team_member",
-                "entity_id": member.id
-            }
-            await self.activity_logs.create_activity(
-                activity_data=data
-            )
             await self.session.delete(member)
             await self.session.commit()
             return True
